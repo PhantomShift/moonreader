@@ -1,7 +1,7 @@
 # Moonreader
 ~~Totally original name~~. Yet another documentation generator for Studio. See [alternatives](#alternatives) for other options that are available.
 
-Inspired by [Moonwave](https://github.com/evaera/moonwave), Moonreader is a simlar tool that generates documentation from the comments within your source code. The aim is to be a supplementary tool for those who work in both Studio and external editors a lot, and can also serve as a sort of "preview" for any documentation you plan on generating through Moonwave, though you can also just use Moonreader by itself if it's all you need.
+Inspired by [Moonwave](https://github.com/evaera/moonwave), Moonreader is a similar tool that generates documentation from the comments within your source code. The aim is to be a supplementary tool for those who work in both Studio and external editors a lot, and can also serve as a sort of "preview" for any documentation you plan on generating through Moonwave, though you can also just use Moonreader by itself if it's all you need.
 
 Moonreader aims to be generally compliant with Moonwave's commenting syntax and support most (if not all) of its tags. See `src/Parser.lua` for the general state of how many tags are implemented.
 
