@@ -1,0 +1,7 @@
+std = "roblox"
+exclude = ["external/*", "*.lua"]
+
+[lints]
+multiple_statements = "allow"
+# For allowing requiring by relative path outside of Roblox
+incorrect_standard_library_use = "allow"

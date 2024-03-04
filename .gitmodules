@@ -1,0 +1,3 @@
+[submodule "external/Highlighter"]
+	path = external/Highlighter
+	url = https://github.com/boatbomber/Highlighter.git

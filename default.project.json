@@ -1,0 +1,17 @@
+{
+    "name": "Moonreader",
+    "tree": {
+        "$path": "src",
+
+        "Assets": {
+            "$path": "assets"
+        },
+
+        "External": {
+            "$className": "Folder",
+            "lexer": {
+                "$path": "external/Highlighter/src/lexer"
+            }
+        }
+    }
+}
