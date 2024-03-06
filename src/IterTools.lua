@@ -621,7 +621,7 @@ function IterTools.Table.SparseArrayOrdered<V>(tbl: {[number]: V})
     local indices = {}
     for k in pairs(tbl) do
         if typeof(k) == "number" then
-            table.insert(indices)
+            table.insert(indices, k)
         end
     end
     table.sort(indices)
