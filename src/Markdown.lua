@@ -118,11 +118,15 @@ local function ProcessMarkdownText(s: string, maintainSize: boolean?)
 		return line:gsub("^((%s*)%* )", function(_capture, indentation)
 			-- temporary measure for unordered list elements
 			return (indentation or "") .. " • "
-		end):gsub("(%*+)([^\n\r]-)(%*+)", function(left, text, right)
+		end):gsub("%*%*%*([^\n\r%*])-%*%*%*", function(text)
 			if maintainSize then return text end
-			if left == right then
-				return MarkdownTextTags[left][1] .. text .. MarkdownTextTags[right][2]
-			end
+			return MarkdownTextTags["***"][1] .. text .. MarkdownTextTags["***"][2]
+		end):gsub("%*%*([^\n\r%*])-%*%*", function(text)
+			if maintainSize then return text end
+			return MarkdownTextTags["**"][1] .. text .. MarkdownTextTags["**"][2]
+		end):gsub("%*([^\n\r%*])-%*", function(text)
+			if maintainSize then return text end
+			return MarkdownTextTags["*"][1] .. text .. MarkdownTextTags["*"][2]
 		end):gsub("(__)([^\n\r]-)(__)", function(left, text, right)
 			if left == right then
 				return MarkdownTextTags[left][1] .. text .. MarkdownTextTags[right][2]
