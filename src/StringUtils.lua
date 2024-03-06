@@ -241,7 +241,7 @@ function StringUtils.FindInRichText(text: string, query: string, init: number?, 
 	if query == "" then return nil end
 	init = init or 1
 	text = text:sub(init :: number)
-	local processedQuery = StringUtils.IterChars(query):map(RichTextEscapes):concat()
+	local processedQuery = query:gsub("[<>\"'&]", RichTextEscapes)
 	if not caseSensitive then
 		processedQuery = processedQuery:lower()
 		text = text:lower()

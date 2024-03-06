@@ -82,12 +82,7 @@ local function ProcessMarkdownText(s: string, maintainSize: boolean?)
 		return line:gsub("\t", (" "):rep(TabLength))
 	end)
 	:map(function(line: string)
-		return StringUtils.IterChars(line)
-		:map(function(char: string)
-			local escape = RichTextEscapes[char]
-			return if escape ~= nil then escape else char
-		end)
-		:concat()
+		return line:gsub("[<>\"'&]", RichTextEscapes)
 	end)
 	-- apply markdown spacing
 	:map(function(line: string)
@@ -153,14 +148,7 @@ local function ProcessMarkdown(text: string, maintainSize: boolean?, splitSectio
 
 	for i, _block, language, comment in text:gmatch("()(```(%w*)\n(.-)\n```)") do
 		-- print("Codeblock:", comment)
-		comment = StringUtils.IterChars(comment:gsub("\t", (" "):rep(TabLength))):map(function(c)
-			if c == "<" then
-				return RichTextEscapes["<"]
-			elseif c == ">" then
-				return RichTextEscapes[">"]
-			end
-			return c
-		end):concat()
+		comment = comment:gsub("\t", (" "):rep(TabLength)):gsub("[<>]", RichTextEscapes)
 		local build = {}
 		for token, content in lexer.scan(comment) do
 			content = content:gsub("^\n", "")
