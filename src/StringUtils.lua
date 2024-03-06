@@ -189,7 +189,7 @@ function StringUtils.GetRichTextPositionBounds(textContainer: TextButton | TextB
 	clone.Archivable = false
 	clone.Size = UDim2.fromOffset(textContainer.AbsoluteSize.X, textContainer.AbsoluteSize.Y)
 	clone.Parent = screengui
-	screengui.Parent = game.StarterGui
+	screengui.Parent = game:GetService("StarterGui")
 
 	local text = textContainer.Text:sub(1, position)
 	local lastSizeNumber, lastSizeString = IterTools.IntoIter(text:gmatch(`<font.->`))
@@ -240,7 +240,7 @@ setmetatable(RichTextEscapes, {__index = function(_self, index) return index end
 function StringUtils.FindInRichText(text: string, query: string, init: number?, caseSensitive: boolean?)
 	if query == "" then return nil end
 	init = init or 1
-	text = text:sub(init)
+	text = text:sub(init :: number)
 	local processedQuery = StringUtils.IterChars(query):map(RichTextEscapes):concat()
 	if not caseSensitive then
 		processedQuery = processedQuery:lower()

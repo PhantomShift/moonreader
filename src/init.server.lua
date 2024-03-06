@@ -80,6 +80,8 @@ local function generateDocs()
 
 				return Parser.ReadScript(desc)
 			end
+
+			return nil
 		end)
 		:flattenList()
 		:truncate()

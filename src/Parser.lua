@@ -258,7 +258,7 @@ function Parser.ReadSource(src: string) : {ParsedComment}
 	return results
 end
 
-type EditableScript = Script | ModuleScript | LocalScript
+type EditableScript = Script | ModuleScript | LocalScript | LuaSourceContainer
 -- Wrapper around Parser.ReadSource that replaces `result.__source` with `source`
 function Parser.ReadScript(source: EditableScript) : ParsedComment & {__source: EditableScript}
 	local results = Parser.ReadSource(source.Source)

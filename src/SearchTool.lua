@@ -91,7 +91,7 @@ function SearchTool:Activate()
 
 	local nextSearchQuery = ""
 	local documentPosition = Instance.new("Vector3Value")
-	local currentSearchResults = {}
+	local currentSearchResults = {}  :: {total_matches: number, [number]: Vector3}
 	self.Connections.TextChanged = searchTool.TextBoxContainer.TextBox:GetPropertyChangedSignal("Text"):Connect(function()
 		nextSearchQuery = searchTool.TextBoxContainer.TextBox.Text
 	end)
