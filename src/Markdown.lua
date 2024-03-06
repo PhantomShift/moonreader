@@ -127,21 +127,15 @@ local function ProcessMarkdownText(s: string, maintainSize: boolean?)
 		end):gsub("%*([^\n\r%*])-%*", function(text)
 			if maintainSize then return text end
 			return MarkdownTextTags["*"][1] .. text .. MarkdownTextTags["*"][2]
-		end):gsub("(__)([^\n\r]-)(__)", function(left, text, right)
-			if left == right then
-				return MarkdownTextTags[left][1] .. text .. MarkdownTextTags[right][2]
-			end
-		end):gsub("(~~)([^\n\r]-)(~~)", function(left, text, right)
-			if left == right then
-				return MarkdownTextTags[left][1] .. text .. MarkdownTextTags[right][2]
-			end
-		end):gsub("(`)([^\n\r]-)(`)", function(left, text, right)
-			if left == right then
-				if maintainSize then
-					return `<font color="rgb({TokenColors.keyword})">{left .. text .. right}</font>`
-				else
-					return `<font color="rgb({TokenColors.keyword})">` .. MarkdownTextTags[left][1] .. text .. MarkdownTextTags[right][2] .. "</font>"
-				end
+		end):gsub("__([^\n\r]-)__", function(text)
+			return MarkdownTextTags["__"][1] .. text .. MarkdownTextTags["__"][2]
+		end):gsub("~~([^\n\r]-)~~", function(text)
+			return MarkdownTextTags["~~"][1] .. text .. MarkdownTextTags["~~"][2]
+		end):gsub("`([^\n\r]-)`", function(text)
+			if maintainSize then
+				return `<font color="rgb({TokenColors.keyword})">{text}</font>`
+			else
+				return `<font color="rgb({TokenColors.keyword})">` .. MarkdownTextTags["`"][1] .. text .. MarkdownTextTags["`"][2] .. "</font>"
 			end
 		end):gsub("(%b[])(%b())", function(text, link)
 			return `<hyperlink link="{link:sub(2, -2)}"><font color="rgb(42, 154, 235)">{text:sub(2, -2)}</font></hyperlink>`
