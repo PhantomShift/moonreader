@@ -36,26 +36,6 @@ local function CaptureFunction(s: string, init: number)
 	}
 end
 
-local TagEnum = {}
-TagEnum.__index = {}
-function TagEnum.new(tag: string, mapping: {string}, ...: string...)
-	return setmetatable({
-		Tag = tag,
-		Mapping = mapping,
-		Patterns = {...}
-	}, TagEnum)
-end
-
-function TagEnum.__index:Match(line: string)
-	for _, pattern in self.Patterns do
-		local info = IterTools.List.Values(self.Mapping):zip(IterTools.FromTuple(line:match(pattern))):collectDict()
-		if next(info) ~= nil then
-			return info
-		end
-	end
-	return nil
-end
-
 local Tags = {
 	-- Doc comments
 	class = "@class (%w+)",
@@ -96,19 +76,6 @@ local COMPLEX_TAGS = {
 		return table.pack(StringUtils.SplitOnce(s, " -- "))
 	end
 }
-
-local function CountContiguous(s: string, pattern: string, init: number?, plain: boolean?)
-	init = init or 0
-	local length = 0
-	local front, back = s:find(pattern, init, plain)
-	while front do
-		length += 1
-		local newFront, newBack = s:find(pattern, back + 1, plain)
-		if newFront and math.abs(newFront - back) > pattern:len() then break end
-		front, back = newFront, newBack
-	end
-	return length
-end
 
 export type ParsedComment = {
 	__source: string,
