@@ -102,6 +102,7 @@ export type ParsedComment = {
 local NewlineInducers = {
 	["%*"] = true,
 	[":::"] = true,
+	["#"] = true
 }
 
 function Parser.ParseCommentGroup(source: string, comment: string, commentType: "Long" | "Dashed") : ParsedComment
@@ -130,7 +131,7 @@ function Parser.ParseCommentGroup(source: string, comment: string, commentType: 
 					if tag == "return" then
 						result[tag][returnNumber] = info[1]
 					else
-					result[tag][info[1]] = info
+						result[tag][info[1]] = info
 					end
 					if tag == "param" then
 						result[tag][info[1]].order = paramNumber
@@ -200,15 +201,35 @@ function Parser.ParseCommentGroup(source: string, comment: string, commentType: 
 		-- print(indentation, result.description)
 	elseif commentType == "Dashed" then
 		local first = comment:match("^(.-)[\n\r]")
-		local indents = first:match("%-+"):len()
+		local indentation = first:match("^%s*%-+%s*")
+		local idents = indentation:len()
+		local inCodeBlock = false
 		result.description = StringUtils.IterLines(comment)
 			:filterMap(function(line)
-				if not line:sub(indents + 1):match("^ @") then
-					return line:gsub("^%-+%s*", "")
+				local text = line:sub(idents + 1)
+				if not text:match("^%s*@") then
+					if text:match("^```") then
+						inCodeBlock = not inCodeBlock
+						print(text)
+						return `{text}\n`
+					end
+					if inCodeBlock then
+						-- not entirely sure what's causing these to exist?
+						if text == "" or text == " " then
+							return nil
+						end
+						return `{text}\n`
+					end
+					for pattern in NewlineInducers do
+						if text:match(`^{pattern}`) then
+							return `\n{text}\n`
+						end
+					end
+					return `{text} `
 				end
 			end)
-			:concat("\n")
-			:gsub("\n\n", "\n")
+			:concat()
+			-- :gsub("\n\n", "\n")
 	end
 	return result
 end
