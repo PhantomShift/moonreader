@@ -35,7 +35,7 @@ function QuickSearchTool.AddEntry(entry: Parser.ParsedComment)
 		end
 	end
 	
-	local returnString = if entry["return"] ~= nil then ` : {next(entry["return"])}` else ""
+	local returnString = if entry["return"] ~= nil then ` : {table.concat(entry["return"], ", ")}` else ""
 	local argString = table.concat(args, ", ")
 	
 	local container = EntryExample:Clone()
@@ -52,7 +52,7 @@ function QuickSearchTool.AddEntry(entry: Parser.ParsedComment)
 		end):concat("\n")) .. "<br />"
 	end
 	if entry["return"] then
-		container.Description.Text ..= Markdown("__Returns__\n" .. "`" .. (next(entry["return"])) .. "`") .. "<br />"
+		container.Description.Text ..= Markdown("__Returns__\n" .. "`" .. (table.concat(entry["return"], ", ")) .. "`") .. "<br />"
 	end
 	if entry.description then
 		container.Description.Text ..= Markdown(entry.description, true)

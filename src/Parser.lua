@@ -93,7 +93,7 @@ export type ParsedComment = {
 
 	yields: {string},
 	param: {[string]: {string}},
-	["return"]: {[string]: {string}},
+	["return"]: {string},
 
 	description: string?,
 	__commentType: "Long" | "Dashed"
@@ -112,6 +112,7 @@ function Parser.ParseCommentGroup(source: string, comment: string, commentType: 
 	result.__start, result.__end = source:find(comment, 0, true)
 
 	local paramNumber = 1
+	local returnNumber = 1
 
 	for tag, pattern in pairs(Tags) do
 		local g = comment:gmatch(pattern)
@@ -126,11 +127,12 @@ function Parser.ParseCommentGroup(source: string, comment: string, commentType: 
 					if tag == "." then tag = "field" end
 	
 					if result[tag] == nil then result[tag] = {} end
+					if tag == "return" then
+						result[tag][returnNumber] = info[1]
+					else
 					result[tag][info[1]] = info
+					end
 					if tag == "param" then
-	
-						-- print(info, comment:match(pattern))
-						
 						result[tag][info[1]].order = paramNumber
 						paramNumber = paramNumber + 1
 					end

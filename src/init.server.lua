@@ -179,8 +179,9 @@ local function generateDocs()
 				numFunctions += 1
 				entryLabel.LayoutOrder = numFunctions
 				entryLabel.Name = tostring(numFunctions)
-					
-				local returnString = if entry["return"] ~= nil then ` : {next(entry["return"])}` else ""
+				
+				-- local returnString = if entry["return"] ~= nil then ` : {next(entry["return"])}` else ""
+				local returnString = if entry["return"] ~= nil then ` : {table.concat(entry["return"], ", ")}` else ""
 				local argString = ""
 				if #args > 1 then
 					argString = "\n" .. IterTools.List.Values(args):map(function(s) return "    " .. s end):concat(",\n") .. "\n"
