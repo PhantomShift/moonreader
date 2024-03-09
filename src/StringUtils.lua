@@ -312,6 +312,19 @@ function StringUtils.MatchMultiple(subject: string, ...: string...)
 	return nil
 end
 
+function StringUtils.LastMatch(subject: string, pattern: string)
+	local g = subject:gmatch(pattern)
+	local matches = {g()}
+	while matches[1] do
+		local new = {g()}
+		if not new[1] then break end
+	end
+	if matches[1] then
+		return table.unpack(matches)
+	end
+	return nil
+end
+
 StringUtils.ContiguousMatchingLines = ContiguousMatchingLines
 
 return StringUtils

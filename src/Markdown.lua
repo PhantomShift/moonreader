@@ -63,7 +63,7 @@ local MarkdownTextTags = {
 	["***"] = {RichTextTags.bold[1]..RichTextTags.italic[1], RichTextTags.italic[2]..RichTextTags.bold[2]},
 	["__"] = RichTextTags.underline,
 	["~~"] = RichTextTags.strikethrough,
-	["`"] = {`<font face="{MonospaceFontName}">`, "</font>"}
+	["`"] = {`<pre><font face="{MonospaceFontName}">`, "</font></pre>"}
 }
 
 local HeaderFontSize = {
@@ -74,6 +74,15 @@ local HeaderFontSize = {
 }
 
 local TabLength = 4
+
+local function isInsidePreformatted(line: string, pos: number)
+	local open = StringUtils.LastMatch(line:sub(pos), "()<pre>")
+	if open == nil then return false end
+	local close = line:match("()</pre>", pos)
+	if not close then return false end
+
+	return true
+end
 
 local function ProcessMarkdownText(s: string, maintainSize: boolean?)
 	local prevEmpty = false
@@ -108,34 +117,45 @@ local function ProcessMarkdownText(s: string, maintainSize: boolean?)
             return `<br /><font size="{HeaderFontSize[math.min(4, shebangs:len())]}">{capture}</font>`
         end)
 	end)
+	-- evaluate preformatted before other text tags
+	:map(function(line: string)
+		return line:gsub("`([^\n\r]-)`", function(text)
+			if maintainSize then
+				return `<pre><font color="rgb({TokenColors.keyword})">{text}</font></pre>`
+			else
+				return `<font color="rgb({TokenColors.keyword})">` .. MarkdownTextTags["`"][1] .. text .. MarkdownTextTags["`"][2] .. "</font>"
+			end
+		end)
+	end)
 	-- text tags
 	:map(function(line: string)
 		return line:gsub("^((%s*)%* )", function(_capture, indentation)
 			-- temporary measure for unordered list elements
 			return (indentation or "") .. " • "
-		end):gsub("%*%*%*([^\n\r%*]-)%*%*%*", function(text)
+		end):gsub("()(%*%*%*([^\n\r%*]-)%*%*%*)", function(pos, orig, text)
 			if maintainSize then return text end
+			if isInsidePreformatted(line, pos) then return orig end
 			return MarkdownTextTags["***"][1] .. text .. MarkdownTextTags["***"][2]
-		end):gsub("%*%*([^\n\r%*]-)%*%*", function(text)
-			if maintainSize then return text end
+		end):gsub("()(%*%*([^\n\r%*]-)%*%*)", function(pos, orig, text)
+			if maintainSize  then return text end
+			if isInsidePreformatted(line, pos) then return orig end
 			return MarkdownTextTags["**"][1] .. text .. MarkdownTextTags["**"][2]
-		end):gsub("%*([^\n\r%*]-)%*", function(text)
+		end):gsub("()(%*([^\n\r%*]-)%*)", function(pos, orig, text)
 			if maintainSize then return text end
+			if isInsidePreformatted(line, pos) then return orig end
 			return MarkdownTextTags["*"][1] .. text .. MarkdownTextTags["*"][2]
-		end):gsub("__([^\n\r]-)__", function(text)
+		end):gsub("()(__([^\n\r]-)__)", function(pos, orig, text)
+			if isInsidePreformatted(line, pos) then return orig end
 			return MarkdownTextTags["__"][1] .. text .. MarkdownTextTags["__"][2]
-		end):gsub("~~([^\n\r]-)~~", function(text)
+		end):gsub("()(~~([^\n\r]-)~~)", function(pos, orig, text)
+			if isInsidePreformatted(line, pos) then return orig end
 			return MarkdownTextTags["~~"][1] .. text .. MarkdownTextTags["~~"][2]
-		end):gsub("`([^\n\r]-)`", function(text)
-			if maintainSize then
-				return `<font color="rgb({TokenColors.keyword})">{text}</font>`
-			else
-				return `<font color="rgb({TokenColors.keyword})">` .. MarkdownTextTags["`"][1] .. text .. MarkdownTextTags["`"][2] .. "</font>"
-			end
-		end):gsub("(%b[])(%b())", function(text, link)
+		end):gsub("()((%b[])(%b()))", function(pos, orig, text, link)
+			if isInsidePreformatted(line, pos) then return text end
 			return `<hyperlink link="{link:sub(2, -2)}"><font color="rgb(42, 154, 235)">{text:sub(2, -2)}</font></hyperlink>`
-		end):gsub("%b[]", function(text)
+		end):gsub("()(%b[])", function(pos, text)
 			-- Hyperlinks to functions/properties
+			if isInsidePreformatted(line, pos) then return text end
 			return `<hyperlink><font color="rgb(42, 154, 235)">{text:sub(2, -2)}</font></hyperlink>`
 		end)
 	end)
