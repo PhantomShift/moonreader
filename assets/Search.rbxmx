@@ -131,7 +131,7 @@
 					</Vector2>
 					<BinaryString name="AttributesSerialize"></BinaryString>
 					<bool name="AutoLocalize">true</bool>
-					<token name="AutomaticSize">1</token>
+					<token name="AutomaticSize">0</token>
 					<Color3 name="BackgroundColor3">
 						<R>1</R>
 						<G>1</G>
@@ -146,7 +146,7 @@
 					<token name="BorderMode">0</token>
 					<int name="BorderSizePixel">1</int>
 					<bool name="ClearTextOnFocus">false</bool>
-					<bool name="ClipsDescendants">false</bool>
+					<bool name="ClipsDescendants">true</bool>
 					<bool name="Draggable">false</bool>
 					<Font name="FontFace">
 						<Family><url>rbxasset://fonts/families/RobotoMono.json</url></Family>

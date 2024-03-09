@@ -18,35 +18,6 @@ function SearchTool.new(documents: {[number]: string})
 		Active = false
 	}
 
-	-- Making limited-size textboxes follow the position of the cursor
-	-- Based partially on the code by user nicemike40 on the devforum
-	-- https://devforum.roblox.com/t/how-to-make-textboxes-follow-current-cursor-position/1368429/6
-	local container = tool.UiObject.TextBoxContainer
-	container.ClipsDescendants = true
-	local textBox = container.TextBox
-	local sizeConstraint = Instance.new("UISizeConstraint")
-	sizeConstraint.MinSize = container.AbsoluteSize
-	container:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
-		sizeConstraint.MinSize = container.AbsoluteSize
-	end)
-	local padding: UIPadding = textBox.UIPadding
-	textBox:GetPropertyChangedSignal("CursorPosition"):Connect(function()
-		local cursorPosition = textBox.CursorPosition
-		if cursorPosition < 1 then
-			-- Unfocused
-			textBox.Position = UDim2.new()
-		else
-			local width = TextService:GetTextSize(
-				textBox.Text:sub(1, cursorPosition),
-				textBox.TextSize,
-				textBox.Font,
-				Vector2.new(math.huge, textBox.AbsoluteSize.Y)
-			).X
-			local totalPadding = padding.PaddingRight.Offset * 2 - padding.PaddingLeft.Offset
-			textBox.Position = UDim2.fromOffset(math.min(0, container.AbsoluteSize.X - width - totalPadding), 0)
-		end
-	end)
-
 	return setmetatable(tool, SearchTool)
 end
 
