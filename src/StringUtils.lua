@@ -247,7 +247,7 @@ function StringUtils.FindInRichText(text: string, query: string, init: number?, 
 		text = text:lower()
 	end
 	local len = text:len()
-    local firstCharacter = RichTextEscapes[query:sub(1, 1)] or processedQuery:sub(1, 1)
+    local firstCharacter = rawget(RichTextEscapes, query:sub(1, 1)) or processedQuery:sub(1, 1)
 
     for position: number in text:gmatch(`(){firstCharacter}`) do
         local eol = math.max(text:match("()\n") or 0, text:match("()<br />") or 0, len)
