@@ -60,7 +60,7 @@
 			<token name="Style">0</token>
 			<BinaryString name="Tags"></BinaryString>
 			<bool name="Visible">true</bool>
-			<int name="ZIndex">1</int>
+			<int name="ZIndex">150</int>
 		</Properties>
 		<Item class="Frame" referent="RBX798561A4CE354B169BCA22C2B3D0E81A">
 			<Properties>
@@ -120,7 +120,7 @@
 				<token name="Style">0</token>
 				<BinaryString name="Tags"></BinaryString>
 				<bool name="Visible">true</bool>
-				<int name="ZIndex">1</int>
+				<int name="ZIndex">151</int>
 			</Properties>
 			<Item class="TextBox" referent="RBX6E5DBE5E68344C4286539DD3C141C4CC">
 				<Properties>
@@ -216,7 +216,7 @@
 					<token name="TextXAlignment">0</token>
 					<token name="TextYAlignment">1</token>
 					<bool name="Visible">true</bool>
-					<int name="ZIndex">1</int>
+					<int name="ZIndex">152</int>
 				</Properties>
 				<Item class="UIPadding" referent="RBXF451202E29A34C918E2ED79185C3710A">
 					<Properties>
@@ -302,7 +302,7 @@
 				<token name="Style">0</token>
 				<BinaryString name="Tags"></BinaryString>
 				<bool name="Visible">true</bool>
-				<int name="ZIndex">1</int>
+				<int name="ZIndex">151</int>
 			</Properties>
 			<Item class="ImageButton" referent="RBX57C3CDC7E24844F79E4EA92E25993B35">
 				<Properties>
@@ -401,7 +401,7 @@
 						<YO>0</YO>
 					</UDim2>
 					<bool name="Visible">true</bool>
-					<int name="ZIndex">1</int>
+					<int name="ZIndex">152</int>
 				</Properties>
 			</Item>
 		</Item>
@@ -493,7 +493,7 @@
 				<token name="TextXAlignment">2</token>
 				<token name="TextYAlignment">1</token>
 				<bool name="Visible">true</bool>
-				<int name="ZIndex">1</int>
+				<int name="ZIndex">151</int>
 			</Properties>
 		</Item>
 		<Item class="TextButton" referent="RBX69D09003E0644A3F965FB71CCCEFC9E5">
@@ -584,7 +584,7 @@
 				<token name="TextXAlignment">2</token>
 				<token name="TextYAlignment">1</token>
 				<bool name="Visible">true</bool>
-				<int name="ZIndex">1</int>
+				<int name="ZIndex">151</int>
 			</Properties>
 		</Item>
 		<Item class="TextButton" referent="RBX48AA94E892A14724B5A5D82627B2C4F1">
@@ -675,7 +675,7 @@
 				<token name="TextXAlignment">2</token>
 				<token name="TextYAlignment">1</token>
 				<bool name="Visible">true</bool>
-				<int name="ZIndex">1</int>
+				<int name="ZIndex">151</int>
 			</Properties>
 		</Item>
 		<Item class="TextButton" referent="RBX741AE5BD95204A1481B5B07E22B8023A">
@@ -766,7 +766,7 @@
 				<token name="TextXAlignment">2</token>
 				<token name="TextYAlignment">1</token>
 				<bool name="Visible">true</bool>
-				<int name="ZIndex">1</int>
+				<int name="ZIndex">151</int>
 			</Properties>
 		</Item>
 		<Item class="TextLabel" referent="RBX5B5378F3FE0F475CBA70D547282F3BAF">
@@ -853,7 +853,7 @@
 				<token name="TextXAlignment">0</token>
 				<token name="TextYAlignment">1</token>
 				<bool name="Visible">true</bool>
-				<int name="ZIndex">1</int>
+				<int name="ZIndex">151</int>
 			</Properties>
 		</Item>
 	</Item>

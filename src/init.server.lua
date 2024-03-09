@@ -16,6 +16,8 @@ local BaseTextLabel = Scroll.HiddenFolder.BaseLabel
 local BlockPadding = Scroll.HiddenFolder.UIPadding
 local Highlighter = Scroll.HighlighterFolder.Highlighter
 
+local SearchButton = Assets.SearchButton
+
 local toolbar = plugin:CreateToolbar("Moonreader")
 
 local Settings = require(script.Settings)
@@ -51,7 +53,7 @@ local quickSearchWidget = plugin:CreateDockWidgetPluginGui("__moonreaderQuickSea
 quickSearchWidget.Title = "Moonreader Quick Search"
 
 QuickSearchTool.SetParent(quickSearchWidget)
-
+SearchButton.Parent = widget
 Scroll.Parent = widget
 
 local function generateDocs()
@@ -307,6 +309,12 @@ local openDocSearchAction = plugin:CreatePluginAction(
 
 openDocSearchAction.Triggered:Connect(function()
 	widget.Enabled = true
+	Search.UiObject.Visible = true
+	task.wait()
+	Search.UiObject.TextBoxContainer.TextBox:CaptureFocus()
+end)
+
+SearchButton.Activated:Connect(function()
 	Search.UiObject.Visible = true
 	task.wait()
 	Search.UiObject.TextBoxContainer.TextBox:CaptureFocus()
