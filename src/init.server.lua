@@ -23,9 +23,11 @@ local toolbar = plugin:CreateToolbar("Moonreader")
 local Settings = require(script.Settings)
 Settings.init(plugin, widgetInfo, toolbar)
 
+local Search
 local searchPos = Vector3.zero
 local function updateHighlight()
-	if searchPos == Vector3.zero then
+	if not Search then return end
+	if searchPos == Vector3.zero or not Search.UiObject.Visible then
 		Highlighter.Visible = false
 	else
 		local child = Scroll:FindFirstChild(tostring(searchPos.X))
@@ -43,7 +45,6 @@ local function updateHighlight()
 	end
 end
 
-local Search
 Scroll:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateHighlight)
 
 local widget: DockWidgetPluginGui = plugin:CreateDockWidgetPluginGui("__moonreaderDocuments", widgetInfo)
@@ -273,6 +274,7 @@ local function generateDocs()
 	Search.UiObject.Visible = false
 	Search.UiObject.CloseContainer.Close.Activated:Connect(function()
 		Search.UiObject.Visible = false
+		Highlighter.Visible = false
 	end)
 end
 
