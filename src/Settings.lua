@@ -332,6 +332,7 @@ One of us is lying; trust nobody.
             label.LayoutOrder = i
             label.BackgroundColor3 = Markdown.stringToColor3(styleInfo.backgroundColor)
             label.TextColor3 = Markdown.stringToColor3(styleInfo.textColor)
+            label.TextSize = styleInfo.TextSize
             BlockPadding:Clone().Parent = label
 
             if entry:match(`<moonreader type="%w*">`) then
