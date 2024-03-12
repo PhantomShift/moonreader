@@ -286,6 +286,16 @@ function Iterator:any<T>(predicate: (T) -> boolean)
     return false
 end
 
+function Iterator:all<T>(predicate: (T) -> boolean) : boolean
+    while not self:exhausted() do
+        local packed = self:nextPacked()
+        if not packed then break end
+        if predicate(table.unpack(packed)) then continue end
+        return false
+    end
+    return true
+end
+
 -- Adapting methods
 
 function Iterator:foreach<T...>(func: (T...) -> ())
