@@ -215,13 +215,22 @@ end
 
 function SettingsInterface.getStyleInfoPreview() : StyleInfo
     local info = {}
+
+    local useDefault = false
+    for _, entry in CollectionService:GetTagged(Tag("StyleSetting")) do
+        if entry:GetAttribute("StyleSetting") == "useCustomStyle" then
+            useDefault = not entry:GetAttribute("Checked")
+            break
+        end
+    end
+
     for _i, entry in CollectionService:GetTagged(Tag("StyleSetting")) do
         local name = entry:GetAttribute("StyleSetting")
         local entryType = entry:GetAttribute("EntryType")
         local data = if entryType == "TextEntry" then entry.Text else entry:GetAttribute("Checked")
         local validator = StyleSettings.Validators[name]
-        if validator and not validator(data) then
-            data = StyleSettings.Defaults[data]
+        if useDefault or (validator and not validator(data)) then
+            data = StyleSettings.Defaults[name]
         end
 
         if validator == validateFontSize then
