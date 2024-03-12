@@ -210,7 +210,6 @@ function Parser.ParseCommentGroup(source: string, comment: string, commentType: 
 				if not text:match("^%s*@") then
 					if text:match("^```") then
 						inCodeBlock = not inCodeBlock
-						print(text)
 						return `{text}\n`
 					end
 					if inCodeBlock then
