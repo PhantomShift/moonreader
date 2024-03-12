@@ -2,6 +2,31 @@ local StringUtils = if game then require(script.Parent.StringUtils) else require
 local IterTools = if game then require(script.Parent.IterTools) else require("src/IterTools")
 local lexer = if game then require(script.Parent.External.lexer) else require("external/Highlighter/src/lexer/init")
 
+type StyleInfo = {
+    useCustomStyle: boolean,
+    backgroundColor: string,
+    codeblock: string,
+    textColor: string,
+    preColor: string,
+    hyperlinkColor: string,
+    h1: number,
+    h2: number,
+    h3: number,
+    h4: number,
+    TextSize: number,
+    iden: string,
+    keyword: string,
+    string: string,
+    number: string,
+    comment: string,
+    operator: string,
+    custom: string,
+    info: string,
+    tip: string,
+    caution: string,
+    warning: string,
+}
+
 local MonospaceFontName = "RobotoMono"
 
 -- Taken from https://github.com/boatbomber/Highlighter/blob/main/src/init.lua
@@ -84,7 +109,7 @@ local function isInsidePreformatted(line: string, pos: number)
 	return true
 end
 
-local function ProcessMarkdownText(s: string, maintainSize: boolean?)
+local function ProcessMarkdownText(s: string, styleInfo: StyleInfo, maintainSize: boolean?)
 	local prevEmpty = false
 	return StringUtils.IterLines(s)
 	:map(function(line: string)
@@ -114,16 +139,16 @@ local function ProcessMarkdownText(s: string, maintainSize: boolean?)
 		if maintainSize then return line:gsub("^#+", "") end
 
 		return line:gsub("^(#+)%s*(.+)", function(shebangs, capture)
-            return `<br /><font size="{HeaderFontSize[math.min(4, shebangs:len())]}">{capture}</font>`
+            return `<br /><font size="{styleInfo[`h{math.min(4, shebangs:len())}`]}">{capture}</font>`
         end)
 	end)
 	-- evaluate preformatted before other text tags
 	:map(function(line: string)
 		return line:gsub("`([^\n\r]-)`", function(text)
 			if maintainSize then
-				return `<pre><font color="rgb({TokenColors.keyword})">{text}</font></pre>`
+				return `<pre><font color="rgb({styleInfo.preColor})">{text}</font></pre>`
 			else
-				return `<font color="rgb({TokenColors.keyword})">` .. MarkdownTextTags["`"][1] .. text .. MarkdownTextTags["`"][2] .. "</font>"
+				return `<font color="rgb({styleInfo.preColor})">` .. MarkdownTextTags["`"][1] .. text .. MarkdownTextTags["`"][2] .. "</font>"
 			end
 		end)
 	end)
@@ -152,17 +177,17 @@ local function ProcessMarkdownText(s: string, maintainSize: boolean?)
 			return MarkdownTextTags["~~"][1] .. text .. MarkdownTextTags["~~"][2]
 		end):gsub("()((%b[])(%b()))", function(pos, orig, text, link)
 			if isInsidePreformatted(line, pos) then return text end
-			return `<hyperlink link="{link:sub(2, -2)}"><font color="rgb(42, 154, 235)">{text:sub(2, -2)}</font></hyperlink>`
+			return `<hyperlink link="{link:sub(2, -2)}"><font color="rgb({styleInfo.hyperlinkColor})">{text:sub(2, -2)}</font></hyperlink>`
 		end):gsub("()(%b[])", function(pos, text)
 			-- Hyperlinks to functions/properties
 			if isInsidePreformatted(line, pos) then return text end
-			return `<hyperlink><font color="rgb(42, 154, 235)">{text:sub(2, -2)}</font></hyperlink>`
+			return `<hyperlink><font color="rgb({styleInfo.hyperlinkColor})">{text:sub(2, -2)}</font></hyperlink>`
 		end)
 	end)
 	:concat("<br />") :: string
 end
 
-local function ProcessMarkdown(text: string, maintainSize: boolean?, splitSections: boolean?)
+local function ProcessMarkdown(text: string, styleInfo: StyleInfo, maintainSize: boolean?, splitSections: boolean?)
 	local indices = {}
 	local processed = {}
 
@@ -173,7 +198,7 @@ local function ProcessMarkdown(text: string, maintainSize: boolean?, splitSectio
 		for token, content in lexer.scan(comment) do
 			content = content:gsub("^\n", "")
 			if SupportedLanguages[language] ~= nil and TokenColors[token] then
-				table.insert(build, `<font color="rgb({TokenColors[token]})" token="{token}">{content}</font>`)
+				table.insert(build, `<font color="rgb({styleInfo[token]})" token="{token}">{content}</font>`)
 			else
 				table.insert(build, content)
 			end
@@ -188,7 +213,7 @@ local function ProcessMarkdown(text: string, maintainSize: boolean?, splitSectio
 	end
 	for i, blockType, comment in text:gmatch("():::(%w*)\n(.-)\n:::") do
 		-- print(i, blockType, comment)
-		processed[i] = `{MoonreaderOpen:format(blockType)}{ProcessMarkdownText(comment, maintainSize)}{MoonreaderClose}`
+		processed[i] = `{MoonreaderOpen:format(blockType)}{ProcessMarkdownText(comment, styleInfo, maintainSize)}{MoonreaderClose}`
 		-- print(processed[i])
 		table.insert(indices, i)
 	end
@@ -196,7 +221,7 @@ local function ProcessMarkdown(text: string, maintainSize: boolean?, splitSectio
 		for mm, ii in StringUtils.IterSplit(m, "\n*:::.-:::\n*", true) do
 			-- print(mm:len(), mm)
 			if mm:len() == 1 then continue end
-			processed[i + ii] = StringUtils.GSubRepeated(ProcessMarkdownText(mm, maintainSize), "^<br />", "")
+			processed[i + ii] = StringUtils.GSubRepeated(ProcessMarkdownText(mm, styleInfo, maintainSize), "^<br />", "")
 			table.insert(indices, i + ii)
 		end
 	end
@@ -229,8 +254,13 @@ if game then
 	local function tostringRGB(color: Color3)
 		return `{color.R * 255}, {color.G * 255}, {color.B * 255}`
 	end
+	local function stringToColor3(s: string)
+		local r, g, b = table.unpack(s:split(", "))
+		return Color3.fromRGB(tonumber(r), tonumber(g), tonumber(b))
+	end
 	Markdown.BlockColors = BlockColors
 	Markdown.color3ToRGB = tostringRGB
+	Markdown.stringToColor3 = stringToColor3
 end
 
 return Markdown :: typeof(Markdown) & typeof(ProcessMarkdown)

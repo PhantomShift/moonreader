@@ -20,8 +20,8 @@ local SearchButton = Assets.SearchButton
 
 local toolbar = plugin:CreateToolbar("Moonreader")
 
-local Settings = require(script.Settings)
-Settings.init(plugin, widgetInfo, toolbar)
+local SettingsInterface = require(script.Settings)
+SettingsInterface.init(plugin, widgetInfo, toolbar)
 
 local Search
 local searchPos = Vector3.zero
@@ -64,12 +64,21 @@ local function generateDocs()
 			child:Destroy()
 		end
 	end
+	
+	local styleInfo = SettingsInterface.getStyleInfo()
+	local function MarkdownStyled(text: string)
+		return Markdown(text, styleInfo)
+	end
+	QuickSearchTool.SetStyleInfo(SettingsInterface.getStyleInfo())
+	Scroll.BackgroundColor3 = Markdown.stringToColor3(styleInfo.backgroundColor)
+	BaseTextLabel.BackgroundColor3 = Markdown.stringToColor3(styleInfo.backgroundColor)
+	BaseTextLabel.TextColor3 = Markdown.stringToColor3(styleInfo.textColor)
 
 	local classes = {}
 	for info: Parser.ParsedComment in IterTools.ObjIntoIter(game:GetDescendants())
 		:filterMap(function(_index: number, desc: Instance)
 			if desc:IsA("LuaSourceContainer") then
-				local ignored = Settings.get("IgnoredPaths")
+				local ignored = SettingsInterface.PlaceSettings:get("IgnoredPaths")
 				if ignored then
 					local fullName = desc:GetFullName()
 					if StringUtils.IterLines(ignored):filter(function(line)
@@ -111,12 +120,12 @@ local function generateDocs()
 		local classIndex = i * 10000
 		classEntry.LayoutOrder = classIndex
 		classEntry.Name = tostring(classIndex)
-		classEntry.Text = Markdown(`# {className}`)
+		classEntry.Text = MarkdownStyled(`# {className}`)
 		if class.rootComment ~= nil and class.rootComment.description:len() > 0 then
 			local pre = StringUtils.IterLines(class.rootComment.description)
 			:map(function(s) return s:gsub("^\t", ""):gsub("^    ", "") end)
 			:concat("\n")
-			classEntry.Text = classEntry.Text .. "<br />" .. Markdown(pre)
+			classEntry.Text = classEntry.Text .. "<br />" .. MarkdownStyled(pre)
 		end
 		classEntry.Parent = Scroll
 	
@@ -127,14 +136,15 @@ local function generateDocs()
 	
 		for _, entry in pairs(class.entries) do
 			local entryLabel = BaseTextLabel:Clone()
+			entryLabel.BackgroundColor3 = Markdown.stringToColor3(styleInfo.backgroundColor)
 			local head = ""
 			if entry.prop then
-				head = Markdown(`### {entry.within}.{entry.prop[1]} : {entry.prop[2] or "unknown"}`)
+				head = MarkdownStyled(`### {entry.within}.{entry.prop[1]} : {entry.prop[2] or "unknown"}`)
 				numProps += 1
 				entryLabel.LayoutOrder = numProps
 				entryLabel.Name = tostring(numProps)
 			elseif entry.interface then
-				head = Markdown(`### {entry.interface}`)
+				head = MarkdownStyled(`### {entry.interface}`)
 				numInterfaces += 1
 				entryLabel.LayoutOrder = numInterfaces
 				entryLabel.Name = tostring(numInterfaces)
@@ -154,10 +164,10 @@ local function generateDocs()
 						return field[1]
 					end):concat("\n    ")
 					local subEntryLabel = BaseTextLabel:Clone()
-					local body = Markdown("```" .. `\n interface {entry.interface} ` .. "{\n    " .. fields .. "\n}\n```")
-					body = body:gsub("interface", `<font color="rgb({Markdown.TokenColors.keyword})">interface</font>`)
+					local body = MarkdownStyled("```" .. `\n interface {entry.interface} ` .. "{\n    " .. fields .. "\n}\n```")
+					body = body:gsub("interface", `<font color="rgb({styleInfo.keyword})">interface</font>`)
 					for _, name in names do
-						body = body:gsub(`{name}:`, `<font color="rgb({Markdown.TokenColors.keyword})">{name}</font>:`)
+						body = body:gsub(`{name}:`, `<font color="rgb({styleInfo.keyword})">{name}</font>:`)
 					end
 					subEntryLabel.Text = body
 					numInterfaces += 1
@@ -178,7 +188,7 @@ local function generateDocs()
 						args[info.order] = arg
 					end
 				end
-				head = Markdown(`### {entry.method or entry["function"]}`)
+				head = MarkdownStyled(`### {entry.method or entry["function"]}`)
 				numFunctions += 1
 				entryLabel.LayoutOrder = numFunctions
 				entryLabel.Name = tostring(numFunctions)
@@ -193,8 +203,8 @@ local function generateDocs()
 				end
 				local concatenator = if entry.method ~= nil then ":" else "."
 				local subEntryLabel = BaseTextLabel:Clone()
-				local body = Markdown("```\n" .. `{entry.within}{concatenator}{entry.method or entry["function"]}({argString}){returnString}` .. "\n```")
-				body = `<font size="{Markdown.HeaderSizes[4]}">{body}</font>`
+				local body = MarkdownStyled("```\n" .. `{entry.within}{concatenator}{entry.method or entry["function"]}({argString}){returnString}` .. "\n```")
+				body = `<font size="{styleInfo.h4}">{body}</font>`
 				subEntryLabel.Text = body
 				numFunctions += 1
 				subEntryLabel.LayoutOrder = numFunctions
@@ -204,15 +214,17 @@ local function generateDocs()
 			entryLabel.Text = entryLabel.Text .. head
 			entryLabel.Parent = Scroll
 			if entry.description ~= nil and entry.description:len() > 0 then
-				for _, subEntry in Markdown(entry.description, nil, true) do
+				for _, subEntry in Markdown(entry.description, styleInfo, nil, true) do
 					local subEntryLabel = BaseTextLabel:Clone()
 					subEntryLabel.Text = subEntry
 					if subEntry:match(`<moonreader type="%w*">`) then
 						local blockType = subEntry:match(`<moonreader type="(%w*)">`)
 						local rounding = Instance.new("UICorner")
 						subEntryLabel.Size = UDim2.new(1, -50, 0, 0)
-						subEntryLabel.BackgroundColor3 = Markdown.BlockColors[blockType] or Color3.new(0.1, 0.05, 0.2)
+						subEntryLabel.BackgroundColor3 = Markdown.stringToColor3(styleInfo[blockType] or styleInfo.backgroundColor)
 						rounding.Parent = subEntryLabel
+					else
+						subEntryLabel.BackgroundColor3 = Markdown.stringToColor3(styleInfo.backgroundColor)
 					end
 					BlockPadding:Clone().Parent = subEntryLabel
 					subEntryLabel.Parent = Scroll
@@ -237,7 +249,8 @@ local function generateDocs()
 			} do
 			if h[3] > h[2] then
 				local entryLabel = BaseTextLabel:Clone()
-				entryLabel.Text = Markdown(`## {h[1]}`)
+				entryLabel.Text = MarkdownStyled(`## {h[1]}`)
+				entryLabel.BackgroundColor3 = Markdown.stringToColor3(styleInfo.backgroundColor)
 				entryLabel.LayoutOrder = h[2]
 				entryLabel.Name = tostring(h[2])
 				entryLabel.Parent = Scroll

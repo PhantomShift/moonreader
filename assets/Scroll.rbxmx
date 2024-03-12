@@ -2,7 +2,7 @@
 	<Meta name="ExplicitAutoJoints">true</Meta>
 	<External>null</External>
 	<External>nil</External>
-	<Item class="ScrollingFrame" referent="RBX31C36EEBF04343FEB3ED183E96D2470E">
+	<Item class="ScrollingFrame" referent="RBX4C265FDF1F1B49738987D4A549B4613C">
 		<Properties>
 			<bool name="Active">true</bool>
 			<Vector2 name="AnchorPoint">
@@ -37,6 +37,7 @@
 				<YS>0</YS>
 				<YO>0</YO>
 			</UDim2>
+			<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
 			<bool name="ClipsDescendants">true</bool>
 			<bool name="DefinesCapabilities">false</bool>
 			<bool name="Draggable">false</bool>
@@ -90,9 +91,10 @@
 			<bool name="Visible">true</bool>
 			<int name="ZIndex">1</int>
 		</Properties>
-		<Item class="UIListLayout" referent="RBXBABA7BDF14524DA097509F0284D6D5AD">
+		<Item class="UIListLayout" referent="RBX3FAD189D977948479678393008A4D267">
 			<Properties>
 				<BinaryString name="AttributesSerialize"></BinaryString>
+				<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
 				<bool name="DefinesCapabilities">false</bool>
 				<token name="FillDirection">1</token>
 				<token name="HorizontalAlignment">0</token>
@@ -111,15 +113,16 @@
 				<bool name="Wraps">false</bool>
 			</Properties>
 		</Item>
-		<Item class="Folder" referent="RBXACA13F38B50845A4913C3B4BAEC91490">
+		<Item class="Folder" referent="RBX6B69C149DAD14641AFC3B5C803333341">
 			<Properties>
 				<BinaryString name="AttributesSerialize"></BinaryString>
+				<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
 				<bool name="DefinesCapabilities">false</bool>
 				<string name="Name">HighlighterFolder</string>
 				<int64 name="SourceAssetId">-1</int64>
 				<BinaryString name="Tags"></BinaryString>
 			</Properties>
-			<Item class="Frame" referent="RBXCA4F3BE487A642A7B384D2451A1C69A2">
+			<Item class="Frame" referent="RBXC756996C904A435F8ABEC78661893C62">
 				<Properties>
 					<bool name="Active">false</bool>
 					<Vector2 name="AnchorPoint">
@@ -142,6 +145,7 @@
 					</Color3>
 					<token name="BorderMode">0</token>
 					<int name="BorderSizePixel">1</int>
+					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
 					<bool name="ClipsDescendants">false</bool>
 					<bool name="DefinesCapabilities">false</bool>
 					<bool name="Draggable">false</bool>
@@ -183,17 +187,19 @@
 				</Properties>
 			</Item>
 		</Item>
-		<Item class="Folder" referent="RBXA180F92A1B844DA0AFFA062DFC30AECF">
+		<Item class="Folder" referent="RBXCF0A0D0C33494C22B5E055910CFD1B7A">
 			<Properties>
 				<BinaryString name="AttributesSerialize"></BinaryString>
+				<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
 				<bool name="DefinesCapabilities">false</bool>
 				<string name="Name">HiddenFolder</string>
 				<int64 name="SourceAssetId">-1</int64>
 				<BinaryString name="Tags"></BinaryString>
 			</Properties>
-			<Item class="UIPadding" referent="RBX7CFEBA0CAA3A4DF98DF683B59D6F0A51">
+			<Item class="UIPadding" referent="RBXB92C43E67A9A42FD8F60D82E3466E661">
 				<Properties>
 					<BinaryString name="AttributesSerialize"></BinaryString>
+					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
 					<bool name="DefinesCapabilities">false</bool>
 					<string name="Name">UIPadding</string>
 					<UDim name="PaddingBottom">
@@ -216,7 +222,7 @@
 					<BinaryString name="Tags"></BinaryString>
 				</Properties>
 			</Item>
-			<Item class="TextLabel" referent="RBX640B8D85DEAE4A77BC979FDBE304D644">
+			<Item class="TextLabel" referent="RBX5C3E40622A5A4F29ADEC77B548DC53D4">
 				<Properties>
 					<bool name="Active">false</bool>
 					<Vector2 name="AnchorPoint">
@@ -238,7 +244,8 @@
 						<B>0.207843155</B>
 					</Color3>
 					<token name="BorderMode">0</token>
-					<int name="BorderSizePixel">1</int>
+					<int name="BorderSizePixel">0</int>
+					<SecurityCapabilities name="Capabilities">0</SecurityCapabilities>
 					<bool name="ClipsDescendants">false</bool>
 					<bool name="DefinesCapabilities">false</bool>
 					<bool name="Draggable">false</bool>
@@ -251,6 +258,8 @@
 					<bool name="Interactable">true</bool>
 					<int name="LayoutOrder">0</int>
 					<float name="LineHeight">1</float>
+					<string name="LocalizationMatchIdentifier"></string>
+					<string name="LocalizationMatchedSourceText"></string>
 					<int name="MaxVisibleGraphemes">-1</int>
 					<string name="Name">BaseLabel</string>
 					<Ref name="NextSelectionDown">null</Ref>

@@ -49,13 +49,13 @@ function QuickSearchTool.AddEntry(entry: Parser.ParsedComment)
 	if #args > 0 then
 		container.Description.Text ..= Markdown("__Params__\n" .. IterTools.List.Values(args):map(function(s: string)
 			return "* `" .. s .. "`"
-		end):concat("\n")) .. "<br />"
+		end):concat("\n"), QuickSearchTool.StyleInfo) .. "<br />"
 	end
 	if entry["return"] then
-		container.Description.Text ..= Markdown("__Returns__\n" .. "`" .. (table.concat(entry["return"], ", ")) .. "`") .. "<br />"
+		container.Description.Text ..= Markdown("__Returns__\n" .. "`" .. (table.concat(entry["return"], ", ")) .. "`", QuickSearchTool.StyleInfo) .. "<br />"
 	end
 	if entry.description then
-		container.Description.Text ..= Markdown(entry.description, true)
+		container.Description.Text ..= Markdown(entry.description, QuickSearchTool.StyleInfo, true)
 	end
 	
 	container.Parent = Entries
@@ -122,6 +122,10 @@ end
 
 function QuickSearchTool.SetParent(parent: Instance)
 	QuickSearchUi.Parent = parent
+end
+
+function QuickSearchTool.SetStyleInfo(styleInfo)
+	QuickSearchTool.StyleInfo = styleInfo
 end
 
 local CaseSensitivityActive = false
