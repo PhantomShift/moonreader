@@ -12,7 +12,7 @@ Moonreader will automatically generate documentation from all of the source cont
 
 A smaller searchable version of the documentation containing only function definitions can be viewed by selecting "Quick Search". Function definitions can be jumped to by clicking on the icon next to the function name.
 
-As of now, the only setting to change is which paths to ignore, which can be viewed and edited by selecting "Open Settings".
+Some configurable settings can be changed by selecting the "Open Settings" button.
 
 To regenerate the documentation, either after editing some source code or changing some settings, select "Generate Docs".
 
