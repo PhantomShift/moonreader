@@ -44,6 +44,7 @@ local Tags = {
 	type = "@type (%w+) ([^\n\r]+)",
 	["function"] = "@function ([%w_]+)",
 	method = "@method ([%w_]+)",
+	ignore = "@ignore", --TODO: automatically skip processing of classes and other comments tagged `ignore`
 
 	-- Interface stuff
 	interface = "@interface (%w+)",
@@ -63,6 +64,25 @@ local Tags = {
 
 local REQUIRED_TAGS = { class = true, within = true }
 local REPEATABLE_TAGS = { param = true, tag = true, ["return"] = true, field = true, ["."] = true }
+local MARKER_TAGS = {
+	yields = true,
+	ignore = true,
+
+	-- tags yet to be implemented
+	-- usage
+	unreleased = true,
+
+	-- visibility
+	private = true,
+	
+	-- realm
+	client = true,
+	server = true,
+	plugin = true,
+
+	-- property
+	readonly = true 
+}
 local function __name_type_comment_parse(s: string)
 	local front, comment = StringUtils.SplitOnce(s, " -- ")
 	local name, par_type = StringUtils.SplitOnce(front, " ")
@@ -89,13 +109,15 @@ export type ParsedComment = {
 	["function"]: string,
 	method: string,
 
+	ignore: boolean,
+
 	tag: {[string]: {string}},
 
-	yields: {string},
+	yields: boolean,
 	param: {[string]: {string}},
 	["return"]: {string},
 
-	description: string?,
+	description: string,
 	__commentType: "Long" | "Dashed"
 }
 
@@ -137,6 +159,8 @@ function Parser.ParseCommentGroup(source: string, comment: string, commentType: 
 						result[tag][info[1]].order = paramNumber
 						paramNumber = paramNumber + 1
 					end
+				elseif MARKER_TAGS[tag] then
+					result[tag] = true
 				else
 					-- if tag == "return" then
 					-- 	print(table.concat({comment:match(pattern)}, "\t"))
