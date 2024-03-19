@@ -75,44 +75,60 @@ local function generateDocs()
 	BaseTextLabel.TextColor3 = Markdown.stringToColor3(styleInfo.textColor)
 
 	local classes = {}
-	for info: Parser.ParsedComment in IterTools.ObjIntoIter(game:GetDescendants())
-		:filterMap(function(_index: number, desc: Instance)
-			if desc:IsA("LuaSourceContainer") then
-				local ignored = SettingsInterface.PlaceSettings:get("IgnoredPaths")
-				local globalIgnored = SettingsInterface.GlobalSettings:get("IgnoredPaths")
-				if not ignored then
-					ignored = globalIgnored
-				elseif globalIgnored then
-					ignored ..= `\n{globalIgnored}`
-				end
-				if ignored then
-					local fullName = desc:GetFullName()
-					if StringUtils.IterLines(ignored):filter(function(line)
-						return line ~= ""
-					end):any(function(line)
-						return fullName:match(`^{line}`) ~= nil
-					end) then
-						return nil
+	local ignored_classes = {}
+	for info: Parser.ParsedComment in
+		IterTools.ObjIntoIter(game:GetDescendants())
+			:filterMap(function(_index: number, desc: Instance)
+				if desc:IsA("LuaSourceContainer") then
+					local ignored = SettingsInterface.PlaceSettings:get("IgnoredPaths")
+					local globalIgnored = SettingsInterface.GlobalSettings:get("IgnoredPaths")
+					if not ignored then
+						ignored = globalIgnored
+					elseif globalIgnored then
+						ignored ..= `\n{globalIgnored}`
 					end
+					if ignored then
+						local fullName = desc:GetFullName()
+						if
+							StringUtils.IterLines(ignored)
+								:filter(function(line)
+									return line ~= ""
+								end)
+								:any(function(line)
+									return fullName:match(`^{line}`) ~= nil
+								end)
+						then
+							return nil
+						end
+					end
+
+					return Parser.ReadScript(desc)
 				end
 
-				return Parser.ReadScript(desc)
+				return nil
+			end)
+			:flattenList()
+			:truncate()
+	do
+		if info.ignore then
+			if info.class ~= nil then
+				ignored_classes[info.class] = true
 			end
+			continue
+		end
+		if ignored_classes[info.class or info.within] then
+			continue
+		end
 
-			return nil
-		end)
-		:flattenList()
-		:truncate()
-		do
 		if info.class ~= nil and classes[info.class] == nil or info.within ~= nil and classes[info.within] == nil then
 			local newClass = {
 				class = info.class or info.within,
-				entries = {} :: {Parser.ParsedComment}
+				entries = {} :: { Parser.ParsedComment },
 			}
-	
+
 			classes[newClass.class] = newClass
 		end
-		
+
 		if info.class ~= nil then
 			classes[info.class].rootComment = info
 		elseif info.within ~= nil then
@@ -120,7 +136,11 @@ local function generateDocs()
 		end
 	end
 	
-	for i, className, class in IterTools.ObjIntoIter(classes):enumerate() do
+	for i: number, className: string, class: {class: string, entries: {Parser.ParsedComment}, rootComment: Parser.ParsedComment} in IterTools.ObjIntoIter(classes):enumerate() do
+		if ignored_classes[className] then
+			continue
+		end
+		
 		local classEntry = BaseTextLabel:Clone()
 		-- Idk how crazy people will be
 		local classIndex = i * 10000
