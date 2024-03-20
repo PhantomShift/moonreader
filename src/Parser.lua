@@ -201,13 +201,12 @@ function Parser.ParseCommentGroup(source: string, comment: string, commentType: 
 			if inCodeBlock then
 				return line:gsub(`^{indentation}`, "\n")
 			end
-			if line == "" and not prevEmpty then
+			if line == "" or line:match("^%s+$") and not prevEmpty then
+				if prevEmpty then
+					return nil
+				end
 				prevEmpty = true
-				-- return "\n"
-				return " "
-			end
-			if line == "" then
-				return
+				return "\n"
 			end
 			-- if line == "" and not prevEmpty then prevEmpty = true return line end
 			if line:match("^%s+") and not line:match("^%s+@") and not line:match("^%s+%.%S") then
@@ -217,17 +216,17 @@ function Parser.ParseCommentGroup(source: string, comment: string, commentType: 
 						return line:gsub(`^{indentation}`, "\n")
 					end
 				end
-				return line:gsub(`^{indentation}`, "")
+				return line:gsub(`^{indentation}`, "") .. " "
 			end
 		end)
 		:concat("")
-		-- :concat("")
-		-- print(indentation, result.description)
+		:gsub("(%s*)$", "")
 	elseif commentType == "Dashed" then
 		local first = comment:match("^(.-)[\n\r]")
 		local indentation = first:match("^%s*%-+%s*")
 		local idents = indentation:len()
 		local inCodeBlock = false
+		local prevEmpty = false
 		result.description = StringUtils.IterLines(comment)
 			:filterMap(function(line)
 				local text = line:sub(idents + 1)
@@ -243,6 +242,15 @@ function Parser.ParseCommentGroup(source: string, comment: string, commentType: 
 						end
 						return `{text}\n`
 					end
+					
+					if text == "" or text:match("^%s+$") then
+						if prevEmpty then
+							return nil
+						end
+						prevEmpty = true
+						return "\n"
+					end
+
 					for pattern in NewlineInducers do
 						if text:match(`^{pattern}`) then
 							return `\n{text}\n`
