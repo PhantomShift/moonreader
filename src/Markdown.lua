@@ -101,12 +101,11 @@ local HeaderFontSize = {
 local TabLength = 4
 
 local function isInsidePreformatted(line: string, pos: number)
-	local open = StringUtils.LastMatch(line:sub(pos), "()<pre>")
+	local open = StringUtils.LastMatch(line:sub(1, pos), "()<pre>")
 	if open == nil then return false end
-	local close = line:match("()</pre>", pos)
-	if not close then return false end
+	local close = line:match("()</pre>", open)
 
-	return true
+    return close > pos
 end
 
 local function ProcessMarkdownText(s: string, styleInfo: StyleInfo, maintainSize: boolean?)
