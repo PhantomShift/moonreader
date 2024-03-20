@@ -43,6 +43,7 @@ function QuickSearchTool.AddEntry(entry: Parser.ParsedComment)
 	container.Visible = true
 	container.Expand.Text = `{base}{concatenator}{name}({argString}){returnString}`
 	container.Description.Size = UDim2.fromScale(1, 0)
+	container.Description.AutomaticSize = Enum.AutomaticSize.None
 
 	container.Description.RichText = true
 	-- container.Description.TextEditable = false
@@ -106,14 +107,13 @@ function QuickSearchTool.Open(entryContainer: QuickSearchContainer)
 		return
 	end
 	QuickSearchTool.CurrentOpen = entryContainer
-	local height = TextService:GetTextSize(entryContainer.Description.ContentText, entryContainer.Description.TextSize, Enum.Font.SourceSans, Vector2.new(entryContainer.Description.AbsoluteSize.X, math.huge)).Y
-	entryContainer.Description:TweenSize(UDim2.new(1, 0, 0, height), nil, nil, TWEEN_TIME, true)
+	entryContainer.Description.AutomaticSize = Enum.AutomaticSize.Y
 end
 
 function QuickSearchTool.Close(entryContainer: QuickSearchContainer?)
 	entryContainer = entryContainer or QuickSearchTool.CurrentOpen
 	if entryContainer then
-		entryContainer.Description:TweenSize(UDim2.new(1, 0, 0, 0), nil, nil, TWEEN_TIME, true)
+		entryContainer.Description.AutomaticSize = Enum.AutomaticSize.None
 		if entryContainer == QuickSearchTool.CurrentOpen then
 			QuickSearchTool.CurrentOpen = nil
 		end
