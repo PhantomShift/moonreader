@@ -208,6 +208,9 @@ local function ProcessMarkdown(text: string, styleInfo: StyleInfo, maintainSize:
 		else
 			processed[i] = MoonreaderOpen:format("codeblock") .. `<font face="{MonospaceFontName}">{table.concat(build)}</font>` .. MoonreaderClose
 		end
+		if not splitSections then
+			processed[i] = `<br />{processed[i]}<br />`
+		end
 		table.insert(indices, i)
 	end
 	for i, blockType, comment in text:gmatch("():::(%w*)\n(.-)\n:::") do
