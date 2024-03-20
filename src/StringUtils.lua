@@ -236,6 +236,26 @@ local RichTextEscapes = {
 	["&"] = "&amp;";
 }
 setmetatable(RichTextEscapes, {__index = function(_self, index) return index end})
+
+local MagicCharacters = {
+	["("] = true,
+	[")"] = true,
+	["."] = true,
+	["%"] = true,
+	["+"] = true,
+	["-"] = true,
+	["*"] = true,
+	["?"] = true,
+	["["] = true,
+	["^"] = true,
+	["$"] = true,
+}
+local function cleanMagicChar(s: string)
+	if MagicCharacters[s] then
+		return `%{s}`
+	end
+	return s 
+end
 -- Note that it does not support newlines/linebreaks
 function StringUtils.FindInRichText(text: string, query: string, init: number?, caseSensitive: boolean?)
 	if query == "" then return nil end
@@ -249,7 +269,7 @@ function StringUtils.FindInRichText(text: string, query: string, init: number?, 
 	local len = text:len()
     local firstCharacter = rawget(RichTextEscapes, query:sub(1, 1)) or processedQuery:sub(1, 1)
 
-    for position: number in text:gmatch(`(){firstCharacter}`) do
+    for position: number in text:gmatch(`(){cleanMagicChar(firstCharacter)}`) do
         local eol = math.max(text:match("()\n") or 0, text:match("()<br />") or 0, len)
         local subText = text:sub(position, eol)
 
