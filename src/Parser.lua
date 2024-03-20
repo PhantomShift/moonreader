@@ -123,6 +123,7 @@ export type ParsedComment = {
 
 local NewlineInducers = {
 	["%*"] = true,
+	["%-"] = true,
 	[":::"] = true,
 	["#"] = true
 }
