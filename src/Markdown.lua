@@ -153,7 +153,7 @@ local function ProcessMarkdownText(s: string, styleInfo: StyleInfo, maintainSize
 	end)
 	-- text tags
 	:map(function(line: string)
-		return line:gsub("^((%s*)%* )", function(_capture, indentation)
+		return line:gsub("^((%s*)[%-%*] )", function(_capture, indentation)
 			-- temporary measure for unordered list elements
 			return (indentation or "") .. " • "
 		end):gsub("()(%*%*%*([^\n\r%*]-)%*%*%*)", function(pos, orig, text)
