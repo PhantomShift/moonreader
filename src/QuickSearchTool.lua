@@ -55,7 +55,7 @@ function QuickSearchTool.AddEntry(entry: Parser.ParsedComment)
 		container.Description.Text ..= Markdown("__Returns__\n" .. "`" .. (table.concat(entry["return"], ", ")) .. "`", QuickSearchTool.StyleInfo) .. "<br />"
 	end
 	if entry.description then
-		container.Description.Text ..= Markdown(entry.description, QuickSearchTool.StyleInfo, true)
+		container.Description.Text ..= Markdown(entry.description, QuickSearchTool.StyleInfo, false)
 	end
 	
 	container.Parent = Entries
