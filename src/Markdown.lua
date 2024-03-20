@@ -216,6 +216,10 @@ local function ProcessMarkdown(text: string, styleInfo: StyleInfo, maintainSize:
 	for i, blockType, comment in text:gmatch("():::(%w*)\n(.-)\n:::") do
 		-- print(i, blockType, comment)
 		processed[i] = `{MoonreaderOpen:format(blockType)}{ProcessMarkdownText(comment, styleInfo, maintainSize)}{MoonreaderClose}`
+		if not splitSections then
+			local header = if blockType == "" then "" else `<font color="rgb({styleInfo[blockType]})">{blockType:sub(1,1):upper() .. blockType:sub(2)}</font><br />`
+			processed[i] = `<br />{header}{processed[i]}<br />`
+		end
 		-- print(processed[i])
 		table.insert(indices, i)
 	end
