@@ -98,7 +98,7 @@ local COMPLEX_TAGS = {
 }
 
 export type ParsedComment = {
-	__source: string,
+	__source: string | EditableScript,
 	__start: number,
 	__end: number,
 	class: string,
@@ -114,7 +114,9 @@ export type ParsedComment = {
 	tag: {[string]: {string}},
 
 	yields: boolean,
-	param: {[string]: {string}},
+	param: {
+		[string]: {[number]: string, order: number}
+	},
 	["return"]: {string},
 
 	description: string,
@@ -268,7 +270,7 @@ end
 
 function Parser.InferFunctionInformation(parsedComment: ParsedComment)   
 	local init: number = parsedComment.__end + 1
-	local rawFunctionInfo = CaptureFunction(parsedComment.__source, init)
+	local rawFunctionInfo = CaptureFunction(parsedComment.__source :: string, init)
 	-- print(parsedComment.param)
 	if rawFunctionInfo == nil then return end
 	parsedComment.within = parsedComment.within or rawFunctionInfo.within
@@ -313,9 +315,9 @@ function Parser.ReadSource(src: string) : {ParsedComment}
 	return results
 end
 
-type EditableScript = Script | ModuleScript | LocalScript | LuaSourceContainer
+export type EditableScript = Script | ModuleScript | LocalScript
 -- Wrapper around Parser.ReadSource that replaces `result.__source` with `source`
-function Parser.ReadScript(source: EditableScript) : ParsedComment & {__source: EditableScript}
+function Parser.ReadScript(source: EditableScript) : ParsedComment
 	local results = Parser.ReadSource(source.Source)
 	for _, result in pairs(results) do
 		result.__source = source

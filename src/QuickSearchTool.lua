@@ -20,7 +20,7 @@ local GarbageMan = Garbage.new()
 
 local TWEEN_TIME = 0.5
 
-function QuickSearchTool.AddEntry(entry: Parser.ParsedComment)
+function QuickSearchTool.AddEntry(entry: Parser.ParsedComment & {__source: LocalScript | ModuleScript | Script})
 	local base = entry.within
 	local concatenator = if entry.method then ":" else "."
 	local name = entry.method or entry["function"]
@@ -78,7 +78,7 @@ function QuickSearchTool.AddEntry(entry: Parser.ParsedComment)
 			if doc ~= nil then
 				local lineNumber = math.min(
 					doc:GetLineCount(),
-					1 + IterTools.ObjIntoIter(entry.__source.source:sub(1, entry.__start):gmatch("\n")):count()
+					1 + IterTools.ObjIntoIter(entry.__source.Source:sub(1, entry.__start):gmatch("\n") :: IterTools.Iterable<nil, string?, nil>):count()
 				)
 				doc:RequestSetSelectionAsync(lineNumber, 1)
 			end

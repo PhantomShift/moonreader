@@ -269,7 +269,7 @@ function StringUtils.FindInRichText(text: string, query: string, init: number?, 
 	local len = text:len()
     local firstCharacter = rawget(RichTextEscapes, query:sub(1, 1)) or processedQuery:sub(1, 1)
 
-    for position: number in text:gmatch(`(){cleanMagicChar(firstCharacter)}`) do
+    for position: number in text:gmatch(`(){cleanMagicChar(firstCharacter)}`) :: () -> ...any do
         local eol = math.max(text:match("()\n") or 0, text:match("()<br />") or 0, len)
         local subText = text:sub(position, eol)
 
@@ -302,7 +302,7 @@ function StringUtils.FindInRichText(text: string, query: string, init: number?, 
             end)
             :concat()
         if found == processedQuery then
-            return init + position - 1, init + position + foundLength - 2
+            return init :: number + position - 1, init :: number + position + foundLength - 2
         end
     end
 
