@@ -372,6 +372,36 @@ function StringUtils.LastMatch(subject: string, pattern: string)
 	return nil
 end
 
+--- Implementation of .gitignore-ish pattern matching.
+--- Mostly based on information provided at
+--- https://www.atlassian.com/git/tutorials/saving-changes/gitignore.
+function StringUtils.IgnorePattern(pattern: string): string
+	local result = pattern
+		:gsub("?", "%%w") -- single character match
+		:gsub("((.?)%.(%w))", function(_, front, char) -- file separator match
+			if front == "" then
+				return `%.?{char}`
+			end
+			return `{front}%.{char}`
+		end)
+		:gsub("%*+", function(s) -- zero or more directories match
+			if s == "*" then
+				return "%w*"
+			end
+			return ".*"
+		end)
+		:gsub("%b[]", function(captured) -- character class and character class inversion
+			if captured:match("^%[!") then
+				return "[^" .. captured:sub(2, -2) .. "]"
+			end
+			return captured
+		end)
+		:gsub("^%.[^%*]", "^") -- match only in root directory
+		:gsub("%.$", "%%.") -- match children specifically
+
+	return result
+end
+
 StringUtils.ContiguousMatchingLines = ContiguousMatchingLines
 
 return StringUtils
