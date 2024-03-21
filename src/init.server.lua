@@ -76,20 +76,26 @@ local function generateDocs()
 
 	local classes = {}
 	local ignored_classes = {}
+	local ignoredPaths: string | {string}? = SettingsInterface.PlaceSettings:get("IgnoredPaths")
+	if ignoredPaths then
+		ignoredPaths = StringUtils.IterLines(ignoredPaths :: string):filterMap(function(pattern)
+			if pattern == "" or pattern == "^%s*$" then return nil end
+			local globPattern = pattern:match("^%$(.+)")
+			if globPattern then
+				return StringUtils.IgnorePattern(globPattern)
+			end
+			return pattern
+		end):collectList()
+	end
 	for info: Parser.ParsedComment in
 		IterTools.ObjIntoIter(game:GetDescendants())
 			:filterMap(function(_index: number, desc: Instance)
 				if desc:IsA("LuaSourceContainer") then
-					local ignored = SettingsInterface.PlaceSettings:get("IgnoredPaths")
-					if ignored then
+					if ignoredPaths then
 						local fullName = desc:GetFullName()
-						if
-							StringUtils.IterLines(ignored)
-								:filter(function(line)
-									return line ~= ""
-								end)
+						if IterTools.List.Values(ignoredPaths)
 								:any(function(line)
-									return fullName:match(`^{line}`) ~= nil
+									return fullName:match(line) ~= nil
 								end)
 						then
 							return nil
