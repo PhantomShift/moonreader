@@ -438,7 +438,9 @@
 					<int64 name="SourceAssetId">-1</int64>
 					<BinaryString name="Tags"></BinaryString>
 					<string name="Text"><![CDATA[List of paths to ignore when generating documents. Follows the rule, for each line,
-<font face="RobotoMono">if scriptSource:GetFullName():match(`^{line}`) then continue end </font>]]></string>
+<font face="RobotoMono">if scriptSource:GetFullName():match(line) then continue end </font>.
+
+Also supports .gitignore-like patterns, which are marked by prepending the pattern with "$", for example <font face="RobotoMono">"$**Network."</font>, which would match against all descendants of Instances named "Network".]]></string>
 					<Color3 name="TextColor3">
 						<R>1</R>
 						<G>1</G>
