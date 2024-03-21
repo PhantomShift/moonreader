@@ -281,7 +281,9 @@ end
 ---@return boolean
 function Iterator:any<T>(predicate: (T) -> boolean)
     while not self:exhausted() do
-        if predicate(self:next()) then return true end
+        local packed = self:nextPacked()
+        if not packed then break end
+        if predicate(table.unpack(packed)) then return true end
     end
     return false
 end
