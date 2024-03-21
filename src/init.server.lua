@@ -96,7 +96,7 @@ local function generateDocs()
 						end
 					end
 
-					return Parser.ReadScript(desc)
+					return Parser.ReadScript(desc :: Parser.EditableScript)
 				end
 
 				return nil

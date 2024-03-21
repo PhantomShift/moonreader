@@ -55,7 +55,7 @@ function Iterator.intoIter<T, U, S>(gen: (S, ...T) -> U, state: S, ...: T)
     end)
 end
 
-type Iterable<State, Index, Return> = {__iter: ((Iterable<State, Index, Return>) -> ((State?, Index?) -> Return, State?, Index?))?}
+export type Iterable<State, Index, Return> = {__iter: ((Iterable<State, Index, Return>) -> ((State?, Index?) -> Return, State?, Index?))?} | () -> (Index, Return)
 --- If `__iter` metamethod is defined, assumes
 --- `__iter(obj)` returns tuple `gen, state, index`.
 --- Defaults to `for k, v in obj`.
@@ -75,7 +75,7 @@ function Iterator.objIntoIter<S, I, R>(obj: Iterable<S, I, R>)
     end
     -- t uses "standard" iteration
     return Iterator.new(function()
-        for k, v in obj do
+        for k, v in obj :: () -> (I, R) do
             coroutine.yield(k, v)
         end
         return nil
