@@ -247,9 +247,8 @@ end
 --- the iterators in this module begin indexing at 1.
 --- @error Invalid Type -- `n` must be positive integer
 --- @error Out of Bounds -- `n > 0` must resolve to true
-function Iterator:nth<T...>(n: number) : T...
+function Iterator:nth<T>(n: number) : T?
     assert(n > 0 and math.round(n) == n, `Attempt to get index {n} of iterator; n must be a positive integer greater than 0`)
-    return Iterator.new(function()
         local count = 0
         while not self:exhausted() and count < n do
             count += 1
@@ -259,7 +258,6 @@ function Iterator:nth<T...>(n: number) : T...
             self:next()
         end
         return nil
-    end)
 end
 
 --- Returns `nil` if the iterator is empty
