@@ -9,7 +9,32 @@ local SettingsFrame = Assets.Settings
 local BaseLabel = Assets.Scroll.HiddenFolder.BaseLabel
 local BlockPadding = Assets.Scroll.HiddenFolder.UIPadding
 
-local SettingsMethods = {}
+type SettingsImpl = {
+    __index:    SettingsImpl,
+    __iter:     (self: Settings) -> (typeof(next), { string }),
+
+    set:            (self: Settings, name: string, val: any) -> boolean,
+    setUnchecked:   (self: Settings, name: string, val: any) -> (),
+    get:            (self: Settings, name: string) -> any,
+    validate:       (self: Settings, name: string, val: any) -> boolean,
+    load:           (self: Settings, data: { [string]: any }) -> (),
+}
+
+type Settings = typeof(setmetatable(
+    {} :: {
+        Inner:      { [string]: any },
+        Aliases:    { [string]: string },
+        Order:      { string },
+        Defaults:   { [string]: any },
+        EntryType:  { [string]: EntryType },
+        Validators: {
+            [string]: (any) -> (boolean, string?)
+        },
+    },
+    {} :: SettingsImpl
+))
+
+local SettingsMethods: SettingsImpl = {} :: SettingsImpl
 SettingsMethods.__index = SettingsMethods
 
 function SettingsMethods.set(self, name: string, val: any)
@@ -46,8 +71,6 @@ function SettingsMethods.__iter(self)
     return next, self.Order
 end
 
-type SettingsMethods = typeof(setmetatable({}, SettingsMethods))
-
 type EntryType = "TextEntry" | "Checkbox"
 local EntryType = {
     TextEntry = function(textbox: TextBox)
@@ -63,10 +86,9 @@ end
 
 local SettingsBuilder = {}
 SettingsBuilder.__index = SettingsBuilder
+type SettingsBuilder = typeof(setmetatable({}, SettingsBuilder))
 
-type SettingsBuilder = typeof(SettingsBuilder)
-
-function SettingsBuilder.new()
+function SettingsBuilder.new() : SettingsBuilder
     return setmetatable({}, SettingsBuilder)
 end
 
@@ -88,7 +110,7 @@ function SettingsBuilder:addEntry(
     return self :: SettingsBuilder
 end
 
-function SettingsBuilder:build()
+function SettingsBuilder:build() : Settings
     local settings = {
         Inner = {},
         Validators = {},
@@ -143,7 +165,7 @@ local function validateFontSize(s: string) : (boolean, string?)
     return false, "%s should be an integer greater than 0"
 end
 
-local StyleSettings: SettingsMethods = SettingsBuilder.new()
+local StyleSettings: Settings = SettingsBuilder.new()
     :addEntry("useCustomStyle", "Use Custom Styling", false, "Checkbox")
     :addEntry("backgroundColor", "Background Color", "47, 47, 47", "TextEntry", validateColor)
     :addEntry("codeblock", "Codeblock Background Color", "26, 13, 51", "TextEntry", validateColor)
@@ -200,7 +222,7 @@ type StyleInfo = {
 }
 
 function SettingsInterface.getStyleInfo() : StyleInfo
-    local getMethod = if StyleSettings:get("useCustomStyle") then StyleSettings.get else function(s: SettingsMethods, name: string)
+    local getMethod = if StyleSettings:get("useCustomStyle") then StyleSettings.get else function(s: Settings, name: string)
         return s.Defaults[name]
     end
     

@@ -4,43 +4,88 @@ local Garbage = require(script.Parent.Garbage)
 local BaseSearchTool = script.Parent.Assets.Search
 type SearchToolUi = typeof(BaseSearchTool)
 
-local DEFAULT_CACHE_SIZE = 10
-local function SearchCache(maxSize: number)
-	local size = 0
-	local inputQueue = {}
-	local caseQueue = {}
-	local caseSensitive = {}
-	local nonCaseSensitive = {}
+type SearchCacheImpl = {
+	__index: SearchCacheImpl,
 
-	local methods = {}
-	function methods.get(case: boolean, input: string) : {Vector3}
-		local ref = if case then caseSensitive else nonCaseSensitive
-		return ref[input]
+	get: (self: SearchCache, case: boolean, input: string) -> { Vector3 },
+	set: (self: SearchCache, case: boolean, input: string, value: { Vector3 }) -> (),
+	pop: (self: SearchCache) -> { Vector3 }?
+}
+type SearchCache = typeof(setmetatable(
+	{} :: {
+		size: 				number,
+		maxSize: 			number,
+		inputQueue:			{ string },
+		caseQueue:			{ boolean },
+		caseSensitive: 		{ [string]: { Vector3 } },
+		caseInsensitive: 	{ [string]: { Vector3 } },
+	},
+	{} :: SearchCacheImpl
+))
+local SearchCacheMethods: SearchCacheImpl = {} :: SearchCacheImpl
+SearchCacheMethods.__index = SearchCacheMethods
+function SearchCacheMethods:get(case, input)
+	local ref = if case then self.caseSensitive else self.caseInsensitive
+	return ref[input]
+end
+function SearchCacheMethods:set(case, input, val)
+	local ref = if case then self.caseSensitive else self.caseInsensitive
+	table.insert(self.caseQueue, case)
+	table.insert(self.inputQueue, input)
+	self.size += 1
+	if self.size > self.maxSize then
+		self:pop()
 	end
-	function methods.set(case: boolean, input: string, val: {Vector3})
-		local ref = if case then caseSensitive else nonCaseSensitive
-		table.insert(caseQueue, case)
-		table.insert(inputQueue, input)
-		size += 1
-		if size > maxSize then
-			methods.pop()
-		end
-		ref[input] = val
-	end
-	function methods.pop() : {Vector3}
-		local case = table.remove(caseQueue, 1)
-		local input = table.remove(inputQueue, 1)
-		local ref = if case then caseSensitive else nonCaseSensitive
-		local val = ref[input]
-		ref[input] = nil
+	ref[input] = val
+end
+function SearchCacheMethods:pop()
+	local case = table.remove(self.caseQueue, 1)
+	local input = table.remove(self.inputQueue, 1)
+	if case == nil or input == nil then return nil end
+	local ref = if case then self.caseSensitive else self.caseInsensitive
+	local val = ref[input]
+	ref[input] = nil
 
-		return val
-	end
-
-	return methods
+	return val
 end
 
-local SearchTool = {}
+local DEFAULT_CACHE_SIZE = 10
+local function SearchCache(maxSize: number) : SearchCache
+	return setmetatable({
+		maxSize = maxSize,
+		size = 0,
+		inputQueue = {},
+		caseQueue = {},
+		caseSensitive = {},
+		caseInsensitive = {}
+	}, SearchCacheMethods)
+end
+
+type SearchToolImpl = {
+	__index: SearchToolImpl,
+
+	SetParent: 		(self: SearchTool, parent: Instance?) -> (),
+	FindAll: 		(self: SearchTool, input: string, overrideCache: boolean?) -> { [number]: Vector3, total_found: number },
+	Activate:		(self: SearchTool) -> RBXScriptSignal<Vector3>,
+	Deactivate: 	(self: SearchTool) -> (),
+	SetDocuments:	(self: SearchTool, documents: { string }) -> (),
+
+	new: (documents: { string }) -> SearchTool
+}
+
+type SearchTool = typeof(setmetatable(
+	{} :: {
+		Documents: { string },
+		CachedSearches: SearchCache,
+		Connections: Garbage.Garbage,
+		UiObject: SearchToolUi,
+		Active: boolean,
+		CaseSensitive: BoolValue
+	},
+	{} :: SearchToolImpl
+))
+
+local SearchTool: SearchToolImpl = {} :: SearchToolImpl
 SearchTool.__index = SearchTool
 
 function SearchTool.new(documents: {[number]: string})
@@ -65,13 +110,13 @@ function SearchTool.new(documents: {[number]: string})
 	return setmetatable(tool, SearchTool)
 end
 
-function SearchTool:SetParent(parent: Instance)
+function SearchTool:SetParent(parent: Instance?)
 	self.UiObject.Parent = parent
 end
 
 function SearchTool:FindAll(input: string, overrideCache: boolean?)
 	if input == "" then return {total_matches = 0} end
-	local cached = self.CachedSearches.get(self.CaseSensitive.Value, input)
+	local cached = self.CachedSearches:get(self.CaseSensitive.Value, input)
 	if not overrideCache and cached ~= nil then
 		return cached
 	end
@@ -91,7 +136,7 @@ function SearchTool:FindAll(input: string, overrideCache: boolean?)
         end
     end
     found.total_matches = total_matches
-	self.CachedSearches.set(self.CaseSensitive.Value, input, found)
+	self.CachedSearches:set(self.CaseSensitive.Value, input, found)
 	return found
 end
 
