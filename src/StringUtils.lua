@@ -392,7 +392,7 @@ function StringUtils.IgnorePattern(pattern: string): string
 		end)
 		:gsub("%b[]", function(captured) -- character class and character class inversion
 			if captured:match("^%[!") then
-				return "[^" .. captured:sub(2, -2) .. "]"
+				return "[^" .. captured:sub(3, -2) .. "]"
 			end
 			return captured
 		end)
