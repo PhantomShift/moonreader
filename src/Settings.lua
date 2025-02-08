@@ -54,7 +54,7 @@ local EntryType = {
         return textbox.Text
     end,
     Checkbox = function(button: GuiButton) : boolean
-        return button:GetAttribute("Checked")
+        return button:GetAttribute("Checked") :: boolean
     end
 }
 local function Tag(s: string) : string
@@ -108,6 +108,10 @@ function SettingsBuilder:build()
 
     return setmetatable(settings, SettingsMethods)
 end
+
+local GlobalSettings: SettingsMethods = SettingsBuilder.new()
+    :addEntry("IgnoredPaths", "Ignored Paths", "PluginDebugService", "TextEntry")
+    :build()
 
 local PlaceSettings: SettingsMethods = SettingsBuilder.new()
     :addEntry("IgnoredPaths", "Ignored Paths", "", "TextEntry")
@@ -168,6 +172,7 @@ local StyleSettings: SettingsMethods = SettingsBuilder.new()
 local SettingsInterface = {}
 SettingsInterface.PlaceSettings = PlaceSettings
 SettingsInterface.StyleSettings = StyleSettings
+SettingsInterface.GlobalSettings = GlobalSettings
 
 type StyleInfo = {
     useCustomStyle: boolean,
@@ -251,6 +256,10 @@ function SettingsInterface.init(plugin: Plugin, widgetInfo: DockWidgetPluginGuiI
     local placeSettings = plugin:GetSetting(`{game.PlaceId}`)
     if placeSettings then
         PlaceSettings:load(placeSettings)
+    end
+    local globalSettings = plugin:GetSetting("GlobalSettings")
+    if globalSettings then
+        GlobalSettings:load(globalSettings)
     end
     
     local Styling = SettingsFrame.SettingsContainer.Styling
@@ -368,6 +377,7 @@ One of us is lying; trust nobody.
 
         if widget.Enabled then
             SettingsFrame.SettingsContainer.IgnoredPaths.TextBox.Text = PlaceSettings:get("IgnoredPaths")
+            SettingsFrame.SettingsContainer.GlobalIgnoredPaths.TextBox.Text = GlobalSettings:get("IgnoredPaths")
 
             for _, entry in CollectionService:GetTagged(Tag("StyleSetting")) do
                 local entryType = entry:GetAttribute("EntryType")
@@ -416,6 +426,7 @@ One of us is lying; trust nobody.
     SettingsFrame.BottomButtons.Apply.Activated:Connect(function()
 
         PlaceSettings:set("IgnoredPaths", StringUtils.TrimWhitespace(SettingsFrame.SettingsContainer.IgnoredPaths.TextBox.Text or ""))
+        GlobalSettings:set("IgnoredPaths", StringUtils.TrimWhitespace(SettingsFrame.SettingsContainer.GlobalIgnoredPaths.TextBox.Text or ""))
 
         for _, entry in CollectionService:GetTagged(Tag("StyleSetting")) do
             local entryName = entry:GetAttribute("StyleSetting")
@@ -437,6 +448,7 @@ One of us is lying; trust nobody.
 
         plugin:SetSetting("StyleSettings", StyleSettings.Inner)
         plugin:SetSetting(`{game.PlaceId}`, PlaceSettings.Inner)
+        plugin:SetSetting("GlobalSettings", GlobalSettings.Inner)
 
         widget.Enabled = false
     end)

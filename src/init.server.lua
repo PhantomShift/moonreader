@@ -79,6 +79,12 @@ local function generateDocs()
 		:filterMap(function(_index: number, desc: Instance)
 			if desc:IsA("LuaSourceContainer") then
 				local ignored = SettingsInterface.PlaceSettings:get("IgnoredPaths")
+				local globalIgnored = SettingsInterface.GlobalSettings:get("IgnoredPaths")
+				if not ignored then
+					ignored = globalIgnored
+				elseif globalIgnored then
+					ignored ..= `\n{globalIgnored}`
+				end
 				if ignored then
 					local fullName = desc:GetFullName()
 					if StringUtils.IterLines(ignored):filter(function(line)
