@@ -48,7 +48,7 @@ local Tags = {
 	-- Interface stuff
 	interface = "@interface (%w+)",
 	field = "@field ([^\n\r]*)",
-	["."] = "%s*%.(%w[^\n\r]*)", -- interface shorthand
+	["."] = "%s*%.(%S[^\n\r]*)", -- interface shorthand
 
 	-- Tag tag
 	tag = "@tag (%w+)",
@@ -186,7 +186,7 @@ function Parser.ParseCommentGroup(source: string, comment: string, commentType: 
 				return
 			end
 			-- if line == "" and not prevEmpty then prevEmpty = true return line end
-			if line:match("^%s+") and not line:match("^%s+@") and not line:match("^%s+%.%w") then
+			if line:match("^%s+") and not line:match("^%s+@") and not line:match("^%s+%.%S") then
 				prevEmpty = false
 				for pattern in NewlineInducers do
 					if line:match(`^%s+{pattern}`) then
@@ -207,7 +207,7 @@ function Parser.ParseCommentGroup(source: string, comment: string, commentType: 
 		result.description = StringUtils.IterLines(comment)
 			:filterMap(function(line)
 				local text = line:sub(idents + 1)
-				if not text:match("^%s*@") then
+				if not text:match("^%s*@") and not text:match("^%s*%.%S") then
 					if text:match("^```") then
 						inCodeBlock = not inCodeBlock
 						return `{text}\n`
