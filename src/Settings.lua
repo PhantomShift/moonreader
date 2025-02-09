@@ -254,7 +254,7 @@ function SettingsInterface.init(plugin: Plugin, widgetInfo: DockWidgetPluginGuiI
         StyleSettings:load(styleSettings)
     end
     local placeSettings = plugin:GetSetting(`{game.PlaceId}`)
-    if placeSettings then
+    if game.PlaceId ~= 0 and placeSettings then
         PlaceSettings:load(placeSettings)
     end
     local globalSettings = plugin:GetSetting("GlobalSettings")
@@ -447,8 +447,11 @@ One of us is lying; trust nobody.
         end
 
         plugin:SetSetting("StyleSettings", StyleSettings.Inner)
-        plugin:SetSetting(`{game.PlaceId}`, PlaceSettings.Inner)
         plugin:SetSetting("GlobalSettings", GlobalSettings.Inner)
+
+        if game.PlaceId ~= 0 then
+            plugin:SetSetting(`{game.PlaceId}`, PlaceSettings.Inner)
+        end
 
         widget.Enabled = false
     end)
