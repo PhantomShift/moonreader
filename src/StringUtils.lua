@@ -301,9 +301,36 @@ function StringUtils.GSubRepeated(input: string, pattern: string, repl: string |
 	return result
 end
 
+
+--- Same functionality as gsub but completely ignores pattern directives
+--- by using string.find with `plain` set to `true`.
+function StringUtils.ReplacePlain(input: string, find: string, replace)
+	local i = 0
+	local substitutions = 0
+	local result = input
+
+	local repl: (string) -> string = if type(replace) == "function" then replace
+		elseif type(replace) == "table" then function(r) return replace[r] end
+		else function(_) return replace end
+	
+	while i < result:len() do
+		local start, finish, found = result:find(find, i, true)
+		if start == nil then
+			break
+		end
+
+		local r = repl(found)
+		result = result:sub(0, start - 1) .. r .. result:sub(finish + 1)
+		i = start + r:len()
+		substitutions += 1
+	end
+
+	return result, substitutions
+end
+
 -- Matches given patterns in order, returning the first one that successfully
 -- matches or nil if none of them match.
-function StringUtils.MatchMultiple(subject: string, ...: string...)
+function StringUtils.MatchMultiple(subject: string, ...: string)
 	for _, pattern in {...} do
 		if subject:match(pattern) then
 			return subject:match(pattern)

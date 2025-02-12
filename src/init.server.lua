@@ -170,10 +170,10 @@ local function generateDocs()
 						return field[1]
 					end):concat("\n    ")
 					local subEntryLabel = BaseTextLabel:Clone()
-					local body = MarkdownStyled("```" .. `\n interface {entry.interface} ` .. "{\n    " .. fields .. "\n}\n```")
+					local body = MarkdownStyled("```" .. `\n interface {entry.interface} ` .. "{\n    " .. fields .. "\n}\n```") :: string
 					body = body:gsub("interface", `<font color="rgb({styleInfo.keyword})">interface</font>`)
 					for _, name in names do
-						body = body:gsub(`{name}:`, `<font color="rgb({styleInfo.keyword})">{name}</font>:`)
+						body = StringUtils.ReplacePlain(body, `{name}:`, `<font color="rgb({styleInfo.keyword})">{name}</font>:`)
 					end
 					subEntryLabel.Text = body
 					numInterfaces += 1
