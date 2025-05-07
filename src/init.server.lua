@@ -172,7 +172,6 @@ local function generateDocs()
 			-- For now, by default, entries tagged with "ignore" or "private" will be hidden by default
 			-- TODO: Add options to view private functions
 			if entry.ignore or entry.private then
-				print("Hidden entry: ", entry)
 				continue
 			end
 
