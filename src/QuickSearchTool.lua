@@ -99,6 +99,8 @@ function QuickSearchTool.Clear()
 			child:Destroy()
 		end
 	end
+	QuickSearchUi.FilterBar.Text = ""
+	table.clear(QuickSearchTool.Containers)
 	QuickSearchTool.CurrentOpen = nil
 end
 
