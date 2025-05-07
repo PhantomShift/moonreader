@@ -1,4 +1,4 @@
-local IterTools = if game then require(script.Parent.IterTools) else require("src/IterTools")
+local IterTools = require "./IterTools"
 
 local StringUtils = {}
 
@@ -38,14 +38,17 @@ function StringUtils.IterSplit(s: string, pattern: string, returnIndex: boolean?
     end)
 end
 
-function StringUtils.MatchRepeated(s: string, pattern: string, sep: string?, init: number?)
+function StringUtils.MatchRepeated(s: string, pattern: string, sep: string?, init: number?, contiguous: boolean?)
 	init = init or 0
 	local front, back = s:find(pattern, init)
+	if contiguous then
+		pattern = "^" .. pattern
+	end
 	local initialFront = front
 	local collected = {}
 	while front do
 		table.insert(collected, s:sub(front, back))
-		local newFront, newBack = s:find(pattern, back)
+		local newFront, newBack = s:find(pattern, back + 1)
 		front = newFront
 		if front and front - back < 3 then
 			back = newBack
@@ -59,12 +62,12 @@ function StringUtils.MatchRepeated(s: string, pattern: string, sep: string?, ini
 	return nil, initialFront, back
 end
 
-function StringUtils.GMatchRepeated(s: string, pattern: string, sep: string?)
-	local match, front, back = StringUtils.MatchRepeated(s, pattern, sep, 0)
+function StringUtils.GMatchRepeated(s: string, pattern: string, sep: string?, contiguous: boolean?)
+	local match, front, back = StringUtils.MatchRepeated(s, pattern, sep, 0, contiguous)
 	local co = coroutine.create(function()
 		while match do
 			coroutine.yield(match, front, back)
-			match, front, back = StringUtils.MatchRepeated(s, pattern, sep, back)
+			match, front, back = StringUtils.MatchRepeated(s, pattern, sep, back, contiguous)
 		end
 		return nil
 	end)
@@ -236,6 +239,26 @@ local RichTextEscapes = {
 	["&"] = "&amp;";
 }
 setmetatable(RichTextEscapes, {__index = function(_self, index) return index end})
+
+local MagicCharacters = {
+	["("] = true,
+	[")"] = true,
+	["."] = true,
+	["%"] = true,
+	["+"] = true,
+	["-"] = true,
+	["*"] = true,
+	["?"] = true,
+	["["] = true,
+	["^"] = true,
+	["$"] = true,
+}
+local function cleanMagicChar(s: string)
+	if MagicCharacters[s] then
+		return `%{s}`
+	end
+	return s 
+end
 -- Note that it does not support newlines/linebreaks
 function StringUtils.FindInRichText(text: string, query: string, init: number?, caseSensitive: boolean?)
 	if query == "" then return nil end
@@ -249,7 +272,7 @@ function StringUtils.FindInRichText(text: string, query: string, init: number?, 
 	local len = text:len()
     local firstCharacter = rawget(RichTextEscapes, query:sub(1, 1)) or processedQuery:sub(1, 1)
 
-    for position: number in text:gmatch(`(){firstCharacter}`) do
+    for position: number in text:gmatch(`(){cleanMagicChar(firstCharacter)}`) :: () -> ...any do
         local eol = math.max(text:match("()\n") or 0, text:match("()<br />") or 0, len)
         local subText = text:sub(position, eol)
 
@@ -282,7 +305,7 @@ function StringUtils.FindInRichText(text: string, query: string, init: number?, 
             end)
             :concat()
         if found == processedQuery then
-            return init + position - 1, init + position + foundLength - 2
+            return init :: number + position - 1, init :: number + position + foundLength - 2
         end
     end
 
@@ -350,6 +373,36 @@ function StringUtils.LastMatch(subject: string, pattern: string)
 		return table.unpack(matches)
 	end
 	return nil
+end
+
+--- Implementation of .gitignore-ish pattern matching.
+--- Mostly based on information provided at
+--- https://www.atlassian.com/git/tutorials/saving-changes/gitignore.
+function StringUtils.IgnorePattern(pattern: string): string
+	local result = pattern
+		:gsub("?", "%%w") -- single character match
+		:gsub("((.?)%.(%w))", function(_, front, char) -- file separator match
+			if front == "" then
+				return `%.?{char}`
+			end
+			return `{front}%.{char}`
+		end)
+		:gsub("%*+", function(s) -- zero or more directories match
+			if s == "*" then
+				return "%w*"
+			end
+			return ".*"
+		end)
+		:gsub("%b[]", function(captured) -- character class and character class inversion
+			if captured:match("^%[!") then
+				return "[^" .. captured:sub(3, -2) .. "]"
+			end
+			return captured
+		end)
+		:gsub("^%.[^%*]", "^") -- match only in root directory
+		:gsub("%.$", "%%.") -- match children specifically
+
+	return result
 end
 
 StringUtils.ContiguousMatchingLines = ContiguousMatchingLines

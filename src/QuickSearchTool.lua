@@ -1,10 +1,10 @@
 local TextService = game:GetService("TextService")
 local ScriptEditorService = game:GetService("ScriptEditorService")
 
-local Parser = require(script.Parent.Parser)
-local Markdown = require(script.Parent.Markdown)
-local IterTools = require(script.Parent.IterTools)
-local Garbage = require(script.Parent.Garbage)
+local Parser = require "./Parser"
+local Markdown = require "./Markdown"
+local IterTools = require "./IterTools"
+local Garbage = require "./Garbage"
 
 local QuickSearchTool = {}
 QuickSearchTool.Containers = {}
@@ -20,7 +20,7 @@ local GarbageMan = Garbage.new()
 
 local TWEEN_TIME = 0.5
 
-function QuickSearchTool.AddEntry(entry: Parser.ParsedComment)
+function QuickSearchTool.AddEntry(entry: Parser.ParsedComment & {__source: LocalScript | ModuleScript | Script})
 	local base = entry.within
 	local concatenator = if entry.method then ":" else "."
 	local name = entry.method or entry["function"]
@@ -43,6 +43,7 @@ function QuickSearchTool.AddEntry(entry: Parser.ParsedComment)
 	container.Visible = true
 	container.Expand.Text = `{base}{concatenator}{name}({argString}){returnString}`
 	container.Description.Size = UDim2.fromScale(1, 0)
+	container.Description.AutomaticSize = Enum.AutomaticSize.None
 
 	container.Description.RichText = true
 	-- container.Description.TextEditable = false
@@ -55,7 +56,7 @@ function QuickSearchTool.AddEntry(entry: Parser.ParsedComment)
 		container.Description.Text ..= Markdown("__Returns__\n" .. "`" .. (table.concat(entry["return"], ", ")) .. "`", QuickSearchTool.StyleInfo) .. "<br />"
 	end
 	if entry.description then
-		container.Description.Text ..= Markdown(entry.description, QuickSearchTool.StyleInfo, true)
+		container.Description.Text ..= Markdown(entry.description, QuickSearchTool.StyleInfo, false)
 	end
 	
 	container.Parent = Entries
@@ -77,7 +78,7 @@ function QuickSearchTool.AddEntry(entry: Parser.ParsedComment)
 			if doc ~= nil then
 				local lineNumber = math.min(
 					doc:GetLineCount(),
-					1 + IterTools.ObjIntoIter(entry.__source.source:sub(1, entry.__start):gmatch("\n")):count()
+					1 + IterTools.ObjIntoIter(entry.__source.Source:sub(1, entry.__start):gmatch("\n") :: IterTools.Iterable<nil, string?, nil>):count()
 				)
 				doc:RequestSetSelectionAsync(lineNumber, 1)
 			end
@@ -98,6 +99,8 @@ function QuickSearchTool.Clear()
 			child:Destroy()
 		end
 	end
+	QuickSearchUi.FilterBar.Text = ""
+	table.clear(QuickSearchTool.Containers)
 	QuickSearchTool.CurrentOpen = nil
 end
 
@@ -106,14 +109,13 @@ function QuickSearchTool.Open(entryContainer: QuickSearchContainer)
 		return
 	end
 	QuickSearchTool.CurrentOpen = entryContainer
-	local height = TextService:GetTextSize(entryContainer.Description.ContentText, entryContainer.Description.TextSize, Enum.Font.SourceSans, Vector2.new(entryContainer.Description.AbsoluteSize.X, math.huge)).Y
-	entryContainer.Description:TweenSize(UDim2.new(1, 0, 0, height), nil, nil, TWEEN_TIME, true)
+	entryContainer.Description.AutomaticSize = Enum.AutomaticSize.Y
 end
 
 function QuickSearchTool.Close(entryContainer: QuickSearchContainer?)
 	entryContainer = entryContainer or QuickSearchTool.CurrentOpen
 	if entryContainer then
-		entryContainer.Description:TweenSize(UDim2.new(1, 0, 0, 0), nil, nil, TWEEN_TIME, true)
+		entryContainer.Description.AutomaticSize = Enum.AutomaticSize.None
 		if entryContainer == QuickSearchTool.CurrentOpen then
 			QuickSearchTool.CurrentOpen = nil
 		end

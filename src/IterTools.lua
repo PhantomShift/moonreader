@@ -55,7 +55,7 @@ function Iterator.intoIter<T, U, S>(gen: (S, ...T) -> U, state: S, ...: T)
     end)
 end
 
-type Iterable<State, Index, Return> = {__iter: ((Iterable<State, Index, Return>) -> ((State?, Index?) -> Return, State?, Index?))?}
+export type Iterable<State, Index, Return> = {__iter: ((Iterable<State, Index, Return>) -> ((State?, Index?) -> Return, State?, Index?))?} | () -> (Index, Return)
 --- If `__iter` metamethod is defined, assumes
 --- `__iter(obj)` returns tuple `gen, state, index`.
 --- Defaults to `for k, v in obj`.
@@ -75,7 +75,7 @@ function Iterator.objIntoIter<S, I, R>(obj: Iterable<S, I, R>)
     end
     -- t uses "standard" iteration
     return Iterator.new(function()
-        for k, v in obj do
+        for k, v in obj :: () -> (I, R) do
             coroutine.yield(k, v)
         end
         return nil
@@ -247,9 +247,8 @@ end
 --- the iterators in this module begin indexing at 1.
 --- @error Invalid Type -- `n` must be positive integer
 --- @error Out of Bounds -- `n > 0` must resolve to true
-function Iterator:nth<T...>(n: number) : T...
+function Iterator:nth<T>(n: number) : T?
     assert(n > 0 and math.round(n) == n, `Attempt to get index {n} of iterator; n must be a positive integer greater than 0`)
-    return Iterator.new(function()
         local count = 0
         while not self:exhausted() and count < n do
             count += 1
@@ -259,7 +258,6 @@ function Iterator:nth<T...>(n: number) : T...
             self:next()
         end
         return nil
-    end)
 end
 
 --- Returns `nil` if the iterator is empty
@@ -281,7 +279,9 @@ end
 ---@return boolean
 function Iterator:any<T>(predicate: (T) -> boolean)
     while not self:exhausted() do
-        if predicate(self:next()) then return true end
+        local packed = self:nextPacked()
+        if not packed then break end
+        if predicate(table.unpack(packed)) then return true end
     end
     return false
 end

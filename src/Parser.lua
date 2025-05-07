@@ -1,8 +1,8 @@
-local StringUtils = if game then require(script.Parent.StringUtils) else require("./src/StringUtils")
-local IterTools = if game then require(script.Parent.IterTools) else require("./src/IterTools")
+local StringUtils = require("./StringUtils")
+local IterTools = require("./IterTools")
 local Parser = {}
 local LONG_COMMENT_PATTERN = "--%[=%[[\n\r].-%]=%]"
-local DASHED_COMMENT_PATTERN = "%-%-%-.-\n"
+local DASHED_COMMENT_PATTERN = "%-%-%-[^\n\r]*\n?\r?"
 local LINE_CAPTURE = "[^\n\r]+"
 
 --TODO?: Support function definitions spanning multiple lines
@@ -56,29 +56,71 @@ local Tags = {
 	-- Function tags
 	yields = "@yields",
 	param = "@param ([^\n\r]*)",
-	["return"] = "@return ([^\n\r]*)"
+	["return"] = "@return ([^\n\r]+)",
+	error = "@error ([^\n\r]+)",
 
-	--TODO: Other tags
+	-- Usage tags
+	unreleased = "@unreleased",
+	since = "@since ([^\n\r]+)",
+	deprecated = "@deprecated ([^\n\r]+)",
+
+	-- Realm tags
+	server = "@server",
+	client = "@client",
+	plugin = "@plugin",
+
+	-- Visibility
+	private = "@private",
+	ignore = "@ignore",-- TODO: automatically skip processing of classes and other comments tagged `ignore`
+
+	-- Property tags
+	readonly = "@readonly",
+
+	-- Class tags
+	__index = "@__index (%w+)" -- TODO: respect index tag when detecting methods
+
+	--TODO: Remaining tag "@external" (needs design to be useful)
 }
 
 local REQUIRED_TAGS = { class = true, within = true }
-local REPEATABLE_TAGS = { param = true, tag = true, ["return"] = true, field = true, ["."] = true }
+local REPEATABLE_TAGS = { param = true, tag = true, ["return"] = true, field = true, ["."] = true, error = true }
+local MARKER_TAGS = {
+	yields = true,
+	ignore = true,
+
+	-- usage
+	unreleased = true,
+
+	-- visibility
+	private = true,
+	
+	-- realm
+	client = true,
+	server = true,
+	plugin = true,
+
+	-- property
+	readonly = true 
+}
 local function __name_type_comment_parse(s: string)
 	local front, comment = StringUtils.SplitOnce(s, " -- ")
 	local name, par_type = StringUtils.SplitOnce(front, " ")
 	return table.pack(name, par_type or "", comment)
 end
+local function __type_opt_desc_parse(s: string)
+	return table.pack(StringUtils.SplitOnce(s, " -- "))
+end
 local COMPLEX_TAGS = {
 	param = __name_type_comment_parse,
 	field = __name_type_comment_parse,
 	["."] = __name_type_comment_parse,
-	["return"] = function(s: string)
-		return table.pack(StringUtils.SplitOnce(s, " -- "))
-	end
+	["return"] = __type_opt_desc_parse,
+	error = __type_opt_desc_parse,
+	deprecated = __type_opt_desc_parse,
 }
 
 export type ParsedComment = {
-	__source: string,
+	__source: string | EditableScript,
 	__start: number,
 	__end: number,
 	class: string,
@@ -91,16 +133,36 @@ export type ParsedComment = {
 
 	tag: {[string]: {string}},
 
-	yields: {string},
-	param: {[string]: {string}},
+	yields: boolean,
+	param: {
+		[string]: {[number]: string, order: number}
+	},
 	["return"]: {string},
+	error: {{string}},
 
-	description: string?,
+		-- Usage tags
+	unreleased: boolean,
+	since: string,
+	deprecated: {string},
+	
+	server: boolean,
+	client: boolean,
+	plugin: boolean,
+	
+	private: boolean,
+	ignore: boolean,
+	
+	readonly: boolean,
+	
+	__index: string,
+
+	description: string,
 	__commentType: "Long" | "Dashed"
 }
 
 local NewlineInducers = {
 	["%*"] = true,
+	["%-"] = true,
 	[":::"] = true,
 	["#"] = true
 }
@@ -114,6 +176,7 @@ function Parser.ParseCommentGroup(source: string, comment: string, commentType: 
 
 	local paramNumber = 1
 	local returnNumber = 1
+	local errorNumber = 1
 
 	for tag, pattern in pairs(Tags) do
 		local g = comment:gmatch(pattern)
@@ -130,6 +193,10 @@ function Parser.ParseCommentGroup(source: string, comment: string, commentType: 
 					if result[tag] == nil then result[tag] = {} end
 					if tag == "return" then
 						result[tag][returnNumber] = info[1]
+						returnNumber += 1
+					elseif tag == "error" then
+						result[tag][errorNumber] = info
+						errorNumber += 1
 					else
 						result[tag][info[1]] = info
 					end
@@ -137,6 +204,8 @@ function Parser.ParseCommentGroup(source: string, comment: string, commentType: 
 						result[tag][info[1]].order = paramNumber
 						paramNumber = paramNumber + 1
 					end
+				elseif MARKER_TAGS[tag] then
+					result[tag] = true
 				else
 					-- if tag == "return" then
 					-- 	print(table.concat({comment:match(pattern)}, "\t"))
@@ -177,13 +246,12 @@ function Parser.ParseCommentGroup(source: string, comment: string, commentType: 
 			if inCodeBlock then
 				return line:gsub(`^{indentation}`, "\n")
 			end
-			if line == "" and not prevEmpty then
+			if line == "" or line:match("^%s+$") and not prevEmpty then
+				if prevEmpty then
+					return nil
+				end
 				prevEmpty = true
-				-- return "\n"
-				return " "
-			end
-			if line == "" then
-				return
+				return "\n"
 			end
 			-- if line == "" and not prevEmpty then prevEmpty = true return line end
 			if line:match("^%s+") and not line:match("^%s+@") and not line:match("^%s+%.%S") then
@@ -193,17 +261,17 @@ function Parser.ParseCommentGroup(source: string, comment: string, commentType: 
 						return line:gsub(`^{indentation}`, "\n")
 					end
 				end
-				return line:gsub(`^{indentation}`, "")
+				return line:gsub(`^{indentation}`, "") .. " "
 			end
 		end)
 		:concat("")
-		-- :concat("")
-		-- print(indentation, result.description)
+		:gsub("(%s*)$", "")
 	elseif commentType == "Dashed" then
 		local first = comment:match("^(.-)[\n\r]")
 		local indentation = first:match("^%s*%-+%s*")
 		local idents = indentation:len()
 		local inCodeBlock = false
+		local prevEmpty = false
 		result.description = StringUtils.IterLines(comment)
 			:filterMap(function(line)
 				local text = line:sub(idents + 1)
@@ -219,6 +287,15 @@ function Parser.ParseCommentGroup(source: string, comment: string, commentType: 
 						end
 						return `{text}\n`
 					end
+					
+					if text == "" or text:match("^%s+$") then
+						if prevEmpty then
+							return nil
+						end
+						prevEmpty = true
+						return "\n"
+					end
+
 					for pattern in NewlineInducers do
 						if text:match(`^{pattern}`) then
 							return `\n{text}\n`
@@ -235,7 +312,7 @@ end
 
 function Parser.InferFunctionInformation(parsedComment: ParsedComment)   
 	local init: number = parsedComment.__end + 1
-	local rawFunctionInfo = CaptureFunction(parsedComment.__source, init)
+	local rawFunctionInfo = CaptureFunction(parsedComment.__source :: string, init)
 	-- print(parsedComment.param)
 	if rawFunctionInfo == nil then return end
 	parsedComment.within = parsedComment.within or rawFunctionInfo.within
@@ -265,7 +342,7 @@ function Parser.ReadSource(src: string) : {ParsedComment}
 	for match in src:gmatch(LONG_COMMENT_PATTERN) do
 		table.insert(results, Parser.ParseCommentGroup(src, match, "Long"))
 	end
-	for _match, front, back in StringUtils.GMatchRepeated(src, DASHED_COMMENT_PATTERN) do
+	for _match, front, back in StringUtils.GMatchRepeated(src, DASHED_COMMENT_PATTERN, nil, true) do
 		table.insert(results, Parser.ParseCommentGroup(src, src:sub(front, back), "Dashed"))
 	end
 
@@ -280,9 +357,9 @@ function Parser.ReadSource(src: string) : {ParsedComment}
 	return results
 end
 
-type EditableScript = Script | ModuleScript | LocalScript | LuaSourceContainer
+export type EditableScript = Script | ModuleScript | LocalScript
 -- Wrapper around Parser.ReadSource that replaces `result.__source` with `source`
-function Parser.ReadScript(source: EditableScript) : ParsedComment & {__source: EditableScript}
+function Parser.ReadScript(source: EditableScript) : ParsedComment
 	local results = Parser.ReadSource(source.Source)
 	for _, result in pairs(results) do
 		result.__source = source

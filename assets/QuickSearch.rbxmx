@@ -573,6 +573,27 @@
 						<bool name="Visible">true</bool>
 						<int name="ZIndex">1</int>
 					</Properties>
+					<Item class="UIPadding" referent="0">
+						<Properties>
+						<string name="Name">UIPadding</string>
+						<UDim name="PaddingBottom">
+							<S>0</S>
+							<O>6</O>
+						</UDim>
+						<UDim name="PaddingLeft">
+							<S>0</S>
+							<O>6</O>
+						</UDim>
+						<UDim name="PaddingRight">
+							<S>0</S>
+							<O>6</O>
+						</UDim>
+						<UDim name="PaddingTop">
+							<S>0</S>
+							<O>6</O>
+						</UDim>
+						</Properties>
+					</Item>
 				</Item>
 				<Item class="ImageButton" referent="RBXCC5D1C7D40EA4127AC017F5F9457F9B9">
 					<Properties>
