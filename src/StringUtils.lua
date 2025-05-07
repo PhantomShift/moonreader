@@ -38,14 +38,17 @@ function StringUtils.IterSplit(s: string, pattern: string, returnIndex: boolean?
     end)
 end
 
-function StringUtils.MatchRepeated(s: string, pattern: string, sep: string?, init: number?)
+function StringUtils.MatchRepeated(s: string, pattern: string, sep: string?, init: number?, contiguous: boolean?)
 	init = init or 0
 	local front, back = s:find(pattern, init)
+	if contiguous then
+		pattern = "^" .. pattern
+	end
 	local initialFront = front
 	local collected = {}
 	while front do
 		table.insert(collected, s:sub(front, back))
-		local newFront, newBack = s:find(pattern, back)
+		local newFront, newBack = s:find(pattern, back + 1)
 		front = newFront
 		if front and front - back < 3 then
 			back = newBack
@@ -59,12 +62,12 @@ function StringUtils.MatchRepeated(s: string, pattern: string, sep: string?, ini
 	return nil, initialFront, back
 end
 
-function StringUtils.GMatchRepeated(s: string, pattern: string, sep: string?)
-	local match, front, back = StringUtils.MatchRepeated(s, pattern, sep, 0)
+function StringUtils.GMatchRepeated(s: string, pattern: string, sep: string?, contiguous: boolean?)
+	local match, front, back = StringUtils.MatchRepeated(s, pattern, sep, 0, contiguous)
 	local co = coroutine.create(function()
 		while match do
 			coroutine.yield(match, front, back)
-			match, front, back = StringUtils.MatchRepeated(s, pattern, sep, back)
+			match, front, back = StringUtils.MatchRepeated(s, pattern, sep, back, contiguous)
 		end
 		return nil
 	end)

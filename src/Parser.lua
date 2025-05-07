@@ -2,7 +2,7 @@ local StringUtils = require("./StringUtils")
 local IterTools = require("./IterTools")
 local Parser = {}
 local LONG_COMMENT_PATTERN = "--%[=%[[\n\r].-%]=%]"
-local DASHED_COMMENT_PATTERN = "%-%-%-.-\n"
+local DASHED_COMMENT_PATTERN = "%-%-%-[^\n\r]*\n?\r?"
 local LINE_CAPTURE = "[^\n\r]+"
 
 --TODO?: Support function definitions spanning multiple lines
@@ -300,7 +300,7 @@ function Parser.ReadSource(src: string) : {ParsedComment}
 	for match in src:gmatch(LONG_COMMENT_PATTERN) do
 		table.insert(results, Parser.ParseCommentGroup(src, match, "Long"))
 	end
-	for _match, front, back in StringUtils.GMatchRepeated(src, DASHED_COMMENT_PATTERN) do
+	for _match, front, back in StringUtils.GMatchRepeated(src, DASHED_COMMENT_PATTERN, nil, true) do
 		table.insert(results, Parser.ParseCommentGroup(src, src:sub(front, back), "Dashed"))
 	end
 
