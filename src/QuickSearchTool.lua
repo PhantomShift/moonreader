@@ -1,10 +1,10 @@
 local TextService = game:GetService("TextService")
 local ScriptEditorService = game:GetService("ScriptEditorService")
 
-local Parser = require(script.Parent.Parser)
-local Markdown = require(script.Parent.Markdown)
-local IterTools = require(script.Parent.IterTools)
-local Garbage = require(script.Parent.Garbage)
+local Parser = require "./Parser"
+local Markdown = require "./Markdown"
+local IterTools = require "./IterTools"
+local Garbage = require "./Garbage"
 
 local QuickSearchTool = {}
 QuickSearchTool.Containers = {}

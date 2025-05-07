@@ -1,8 +1,8 @@
 local CollectionService = game:GetService("CollectionService")
 
-local StringUtils = require(script.Parent.StringUtils)
-local IterTools = require(script.Parent.IterTools)
-local Markdown = require(script.Parent.Markdown)
+local StringUtils = require "./StringUtils"
+local IterTools = require "./IterTools"
+local Markdown = require "./Markdown"
 
 local Assets = script.Parent.Assets
 local SettingsFrame = Assets.Settings

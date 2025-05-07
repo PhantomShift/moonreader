@@ -1,5 +1,5 @@
-local StringUtils = if game then require(script.Parent.StringUtils) else require("src/StringUtils")
-local IterTools = if game then require(script.Parent.IterTools) else require("src/IterTools")
+local StringUtils = require "./StringUtils"
+local IterTools = require "./IterTools"
 local lexer = if game then require(script.Parent.External.lexer) else require("external/Highlighter/src/lexer/init")
 
 type StyleInfo = {

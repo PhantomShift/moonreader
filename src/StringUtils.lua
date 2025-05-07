@@ -1,4 +1,4 @@
-local IterTools = if game then require(script.Parent.IterTools) else require("src/IterTools")
+local IterTools = require "./IterTools"
 
 local StringUtils = {}
 

@@ -1,5 +1,5 @@
-local StringUtils = require(script.Parent.StringUtils)
-local Garbage = require(script.Parent.Garbage)
+local StringUtils = require "./StringUtils"
+local Garbage = require "./Garbage"
 
 local BaseSearchTool = script.Parent.Assets.Search
 type SearchToolUi = typeof(BaseSearchTool)
