@@ -131,11 +131,11 @@ function SettingsBuilder:build() : Settings
     return setmetatable(settings, SettingsMethods)
 end
 
-local GlobalSettings: SettingsMethods = SettingsBuilder.new()
+local GlobalSettings: Settings = SettingsBuilder.new()
     :addEntry("IgnoredPaths", "Ignored Paths", "PluginDebugService", "TextEntry")
     :build()
 
-local PlaceSettings: SettingsMethods = SettingsBuilder.new()
+local PlaceSettings: Settings = SettingsBuilder.new()
     :addEntry("IgnoredPaths", "Ignored Paths", "", "TextEntry")
     :build()
 
