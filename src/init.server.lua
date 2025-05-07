@@ -169,11 +169,21 @@ local function generateDocs()
 		local numFunctions = classIndex + 3000
 	
 		for _, entry in pairs(class.entries) do
+			-- For now, by default, entries tagged with "ignore" or "private" will be hidden by default
+			-- TODO: Add options to view private functions
+			if entry.ignore or entry.private then
+				print("Hidden entry: ", entry)
+				continue
+			end
+
 			local entryLabel = BaseTextLabel:Clone()
 			entryLabel.BackgroundColor3 = Markdown.stringToColor3(styleInfo.backgroundColor)
 			local head = ""
 			if entry.prop then
 				head = MarkdownStyled(`### {entry.within}.{entry.prop[1]} : {entry.prop[2] or "unknown"}`)
+				if entry.readonly then
+					head ..= MarkdownStyled(" 📙 Read Only")
+				end
 				numProps += 1
 				entryLabel.LayoutOrder = numProps
 				entryLabel.Name = tostring(numProps)
@@ -245,6 +255,28 @@ local function generateDocs()
 				subEntryLabel.Name = tostring(numFunctions)
 				subEntryLabel.Parent = Scroll
 			end
+
+			-- Labels that apply for all entries
+			if entry.server then
+				head ..= MarkdownStyled(" 🌐 Server")
+			end
+			if entry.client then
+				head ..= MarkdownStyled(" 🖥️ Client")
+			end
+			if entry.client then
+				head ..= MarkdownStyled(" 📃 Plugin")
+			end
+			if entry.yields then
+				head ..= MarkdownStyled(" ⚠️ Yields")
+			end
+			if entry.unreleased then
+				head ..= " <i>Unreleased</i>"
+			end
+			-- TODO: Deprecated tag
+			if entry.since then
+				head ..= ` <i>since {entry.since}</i>`
+			end
+
 			entryLabel.Text = entryLabel.Text .. head
 			entryLabel.Parent = Scroll
 			if entry.description ~= nil and entry.description:len() > 0 then
@@ -274,6 +306,22 @@ local function generateDocs()
 					end
 					subEntryLabel.Name = tostring(subEntryLabel.LayoutOrder)
 				end
+			end
+
+			if entry.error ~= nil then
+				local errorEntryLabel = BaseTextLabel:Clone()
+				errorEntryLabel.Text = MarkdownStyled("#### Errors")
+				for _num, error in entry.error do
+					local errType, errDesc = table.unpack(error)
+					errorEntryLabel.Text ..= "\n" .. MarkdownStyled(("`%s`"):format(errType))
+					if errDesc then
+						errorEntryLabel.Text ..= " - " .. MarkdownStyled(errDesc)
+					end
+				end
+				numFunctions += 1
+				errorEntryLabel.LayoutOrder = numFunctions
+				errorEntryLabel.Name = tostring(errorEntryLabel.LayoutOrder)
+				errorEntryLabel.Parent = Scroll
 			end
 		end
 		for _, h in {

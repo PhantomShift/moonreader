@@ -44,7 +44,6 @@ local Tags = {
 	type = "@type (%w+) ([^\n\r]+)",
 	["function"] = "@function ([%w_]+)",
 	method = "@method ([%w_]+)",
-	ignore = "@ignore", --TODO: automatically skip processing of classes and other comments tagged `ignore`
 
 	-- Interface stuff
 	interface = "@interface (%w+)",
@@ -57,18 +56,38 @@ local Tags = {
 	-- Function tags
 	yields = "@yields",
 	param = "@param ([^\n\r]*)",
-	["return"] = "@return ([^\n\r]*)"
+	["return"] = "@return ([^\n\r]+)",
+	error = "@error ([^\n\r]+)",
 
-	--TODO: Other tags
+	-- Usage tags
+	unreleased = "@unreleased",
+	since = "@since ([^\n\r]+)",
+	deprecated = "@deprecated ([^\n\r]+)",
+
+	-- Realm tags
+	server = "@server",
+	client = "@client",
+	plugin = "@plugin",
+
+	-- Visibility
+	private = "@private",
+	ignore = "@ignore",-- TODO: automatically skip processing of classes and other comments tagged `ignore`
+
+	-- Property tags
+	readonly = "@readonly",
+
+	-- Class tags
+	__index = "@__index (%w+)" -- TODO: respect index tag when detecting methods
+
+	--TODO: Remaining tag "@external" (needs design to be useful)
 }
 
 local REQUIRED_TAGS = { class = true, within = true }
-local REPEATABLE_TAGS = { param = true, tag = true, ["return"] = true, field = true, ["."] = true }
+local REPEATABLE_TAGS = { param = true, tag = true, ["return"] = true, field = true, ["."] = true, error = true }
 local MARKER_TAGS = {
 	yields = true,
 	ignore = true,
 
-	-- tags yet to be implemented
 	-- usage
 	unreleased = true,
 
@@ -88,13 +107,16 @@ local function __name_type_comment_parse(s: string)
 	local name, par_type = StringUtils.SplitOnce(front, " ")
 	return table.pack(name, par_type or "", comment)
 end
+local function __type_opt_desc_parse(s: string)
+	return table.pack(StringUtils.SplitOnce(s, " -- "))
+end
 local COMPLEX_TAGS = {
 	param = __name_type_comment_parse,
 	field = __name_type_comment_parse,
 	["."] = __name_type_comment_parse,
-	["return"] = function(s: string)
-		return table.pack(StringUtils.SplitOnce(s, " -- "))
-	end
+	["return"] = __type_opt_desc_parse,
+	error = __type_opt_desc_parse,
+	deprecated = __type_opt_desc_parse,
 }
 
 export type ParsedComment = {
@@ -109,8 +131,6 @@ export type ParsedComment = {
 	["function"]: string,
 	method: string,
 
-	ignore: boolean,
-
 	tag: {[string]: {string}},
 
 	yields: boolean,
@@ -118,6 +138,23 @@ export type ParsedComment = {
 		[string]: {[number]: string, order: number}
 	},
 	["return"]: {string},
+	error: {{string}},
+
+		-- Usage tags
+	unreleased: boolean,
+	since: string,
+	deprecated: {string},
+	
+	server: boolean,
+	client: boolean,
+	plugin: boolean,
+	
+	private: boolean,
+	ignore: boolean,
+	
+	readonly: boolean,
+	
+	__index: string,
 
 	description: string,
 	__commentType: "Long" | "Dashed"
@@ -139,6 +176,7 @@ function Parser.ParseCommentGroup(source: string, comment: string, commentType: 
 
 	local paramNumber = 1
 	local returnNumber = 1
+	local errorNumber = 1
 
 	for tag, pattern in pairs(Tags) do
 		local g = comment:gmatch(pattern)
@@ -155,6 +193,10 @@ function Parser.ParseCommentGroup(source: string, comment: string, commentType: 
 					if result[tag] == nil then result[tag] = {} end
 					if tag == "return" then
 						result[tag][returnNumber] = info[1]
+						returnNumber += 1
+					elseif tag == "error" then
+						result[tag][errorNumber] = info
+						errorNumber += 1
 					else
 						result[tag][info[1]] = info
 					end
