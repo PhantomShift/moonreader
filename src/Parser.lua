@@ -421,7 +421,7 @@ end
 
 export type EditableScript = Script | ModuleScript | LocalScript
 -- Wrapper around Parser.ReadSource that replaces `result.__source` with `source`
-function Parser.ReadScript(source: EditableScript) : ParsedComment
+function Parser.ReadScript(source: EditableScript) : {ParsedComment}
 	local results = Parser.ReadSource(source.Source)
 	for _, result in pairs(results) do
 		result.__source = source
