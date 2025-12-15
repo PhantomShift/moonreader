@@ -1,6 +1,15 @@
 local StringUtils = require("./StringUtils")
 local IterTools = require("./IterTools")
 local Parser = {}
+
+type CommentMetadata = {
+	long : {
+		indent: string,
+		equalLength: number,
+	}?,
+	dashed : {}?,
+}
+
 local LONG_COMMENT_PATTERN = "--%[=%[[\n\r].-%]=%]"
 local DASHED_COMMENT_PATTERN = "%-%-%-[^\n\r]*\n?\r?"
 local LINE_CAPTURE = "[^\n\r]+"
@@ -34,6 +43,49 @@ local function CaptureFunction(s: string, init: number)
 		arguments = capture[4] :: string,
 		returnType = capture[5] :: {string}?
 	}
+end
+
+local function GetLongCommentMeta(s: string) : CommentMetadata
+	local metadata = {}
+
+	local iter = StringUtils.IterLines(s) :: () -> string
+	local commentStart = iter():match("--%[=*%[") :: string
+	metadata.equalLength = (commentStart:match("=+") or ""):len()
+	local line
+	repeat
+		line = iter()
+	until not (line:len() == 0 or line:match("^%s+$"))
+	metadata.indent = line:match("^%s+") or ""
+
+	return { long = metadata }
+end
+
+-- Small state machine to properly capture long comments
+local function CaptureLongComment(s: string, init: number?) : (string?, ...number)
+	local i = init or 0
+	local len = s:len()
+	local window = s:sub(i, i + 2)
+	local matchStart = 0
+	
+	while matchStart < len do
+		while window ~= "--[" and i + 2 < len do
+			i += 1
+			window = s:sub(i, i + 2)
+		end
+		if window ~= "--[" then
+			return nil
+		end
+		matchStart = i
+		local balance = (s:sub(i + 3):match("^=+") or ""):len()
+		local closing = `]{string.rep("=", balance)}]`
+		local _closeStart, closeEnd = s:find(closing, i + 3, true)
+		if closeEnd ~= nil then
+			return s:sub(matchStart, closeEnd), matchStart, closeEnd
+		end
+		i = matchStart + 3
+	end
+
+	return nil
 end
 
 local Tags = {
@@ -225,12 +277,18 @@ function Parser.ParseCommentGroup(source: string, comment: string, commentType: 
 	end
 	-- Overall entry description
 	if commentType == "Long" then
-		local indentation = comment:match("\n(%s*)")
+		local meta = GetLongCommentMeta(comment).long
+		local indentation = meta.indent
+		local equalLength = meta.equalLength
+		local commentCloser = `]{("="):rep(equalLength)}]%s*$`
 		local prevEmpty = false
 		local inCodeBlock = false
 		local inNonCodeBlock = false
 		result.description = StringUtils.IterLines(comment)
-		:filterMap(function(line)
+		:filterMap(function(line: string)
+			if line:match(commentCloser) then
+				return nil
+			end
 			if not inNonCodeBlock and line:match("^%s+:::") then
 				inNonCodeBlock = true
 				return line:gsub(`^{indentation}`, "\n") .. "\n"
@@ -263,9 +321,10 @@ function Parser.ParseCommentGroup(source: string, comment: string, commentType: 
 				end
 				return line:gsub(`^{indentation}`, "") .. " "
 			end
+			return nil
 		end)
 		:concat("")
-		:gsub("(%s*)$", "")
+		:gsub("(%s+)$", "")
 	elseif commentType == "Dashed" then
 		local first = comment:match("^(.-)[\n\r]")
 		local indentation = first:match("^%s*%-+%s*")
@@ -303,6 +362,7 @@ function Parser.ParseCommentGroup(source: string, comment: string, commentType: 
 					end
 					return `{text} `
 				end
+				return nil
 			end)
 			:concat()
 			-- :gsub("\n\n", "\n")
@@ -339,8 +399,10 @@ end
 
 function Parser.ReadSource(src: string) : {ParsedComment}
 	local results = {}
-	for match in src:gmatch(LONG_COMMENT_PATTERN) do
-		table.insert(results, Parser.ParseCommentGroup(src, match, "Long"))
+	local comment, _start, finish = CaptureLongComment(src)
+	while comment ~= nil do
+		table.insert(results, Parser.ParseCommentGroup(src, comment, "Long"))
+		comment, _start, finish = CaptureLongComment(src, finish)
 	end
 	for _match, front, back in StringUtils.GMatchRepeated(src, DASHED_COMMENT_PATTERN, nil, true) do
 		table.insert(results, Parser.ParseCommentGroup(src, src:sub(front, back), "Dashed"))
