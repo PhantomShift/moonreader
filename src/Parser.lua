@@ -77,10 +77,13 @@ local function CaptureLongComment(s: string, init: number?) : (string?, ...numbe
 		end
 		matchStart = i
 		local balance = (s:sub(i + 3):match("^=+") or ""):len()
-		local closing = `]{string.rep("=", balance)}]`
-		local _closeStart, closeEnd = s:find(closing, i + 3, true)
-		if closeEnd ~= nil then
-			return s:sub(matchStart, closeEnd), matchStart, closeEnd
+		-- Note: Moonwave specifies that doc comments SPECIFICALLY use one equals sign
+		if balance == 1 then
+			local closing = `]{string.rep("=", balance)}]`
+			local _closeStart, closeEnd = s:find(closing, i + 3, true)
+			if closeEnd ~= nil then
+				return s:sub(matchStart, closeEnd), matchStart, closeEnd
+			end
 		end
 		i = matchStart + 3
 	end
