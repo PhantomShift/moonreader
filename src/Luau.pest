@@ -1,0 +1,180 @@
+NUM_HEX = @{ "0" ~ ^"x" ~ ASCII_HEX_DIGIT+ }
+NUM_BIN = @{ "0" ~ ^"b" ~ ASCII_BIN_DIGIT+ }
+NUMBER  = @{ (NUM_HEX | NUM_BIN) | (ASCII_DIGIT ~ (ASCII_DIGIT | "_")* ~ ("." ~ (ASCII_DIGIT | "_")*)?) ~ (^"e" ~ "-"? ~ (("_"+ ~ ASCII_DIGIT) | ASCII_DIGIT) ~ (ASCII_DIGIT | "_")*)? }
+
+RAW_STRING             = ${ "[" ~ PUSH("="*) ~ "[" ~ RAW_STRING_INTERIOR ~ "]" ~ POP ~ "]" }
+RAW_STRING_INTERIOR    = @{ (!("]" ~ PEEK ~ "]") ~ ANY)* }
+RAW_STRING_INCOMP      = @{ "[" ~ "="* ~ "[" ~ ANY* ~ EOI }
+QUOTED_STRING          = ${ PUSH("\"" | "'") ~ QUOTED_STRING_INTERIOR ~ POP }
+QUOTED_STRING_INTERIOR = @{ (!PEEK ~ ANY)* }
+QUOTED_STRING_INCOMP   = ${ ("\"" | "'") ~ (!NEWLINE ~ ANY)* ~ (NEWLINE | EOI) }
+STRING                 =  { QUOTED_STRING | RAW_STRING | QUOTED_STRING_INCOMP | RAW_STRING_INCOMP }
+
+NAME = @{ KEYWORD? ~ (ASCII_ALPHA | "_") ~ (ASCII_ALPHANUMERIC | "_")* }
+
+WHITESPACE = _{ " " | "\t" | NEWLINE }
+COMMENT    = _{ "--" ~ (RAW_STRING | RAW_STRING_INCOMP | ((!NEWLINE ~ ANY)* ~ NEWLINE)) }
+
+chunk = { SOI ~ block }
+block = { (stat ~ ";"?)* ~ (laststat ~ ";"?)? }
+
+VARLIST_ASSIGN  = { varlist ~ "=" ~ explist }
+COMPOUND_ASSIGN = { var ~ compoundop ~ exp }
+DO_BLOCK        = { "do" ~ block ~ "end" }
+WHILE_BLOCK     = { "while" ~ exp ~ "do" ~ block ~ "end" }
+REPEAT_BLOCK    = { "repeat" ~ block ~ "until" ~ exp }
+IF_BLOCK        = { "if" ~ exp ~ "then" ~ block }
+ELSEIF_BLOCK    = { "elseif" ~ exp ~ "then" ~ block }
+ELSE_BLOCK      = { ("else" ~ block) }
+IF              = { IF_BLOCK ~ ELSEIF_BLOCK* ~ ELSE_BLOCK? ~ "end" }
+FOR_NUMBER      = { "for" ~ binding ~ "=" ~ exp ~ "," ~ exp ~ ("," ~ exp)? ~ "do" ~ block ~ "end" }
+FOR_IN          = { "for" ~ bindinglist ~ "in" ~ explist ~ "do" ~ block ~ "end" }
+FUNC_DEF        = { "function" ~ funcname ~ funcbody }
+LOCAL_FUNC_DEF  = { "local" ~ "function" ~ NAME ~ funcbody }
+LOCAL_ASSIGN    = { "local" ~ bindinglist ~ ("=" ~ explist)? }
+TYPE_EXPORT     = { "export" }
+TYPE_DEF        = { TYPE_EXPORT? ~ "type" ~ NAME ~ ("<" ~ GenericTypeListWithDefaults ~ ">")? ~ "=" ~ Type }
+
+stat = {
+    LOCAL_ASSIGN
+  | VARLIST_ASSIGN
+  | COMPOUND_ASSIGN
+  | DO_BLOCK
+  | WHILE_BLOCK
+  | REPEAT_BLOCK
+  | IF
+  | FOR_IN
+  | FOR_NUMBER
+  | #func = LOCAL_FUNC_DEF
+  | #func = FUNC_DEF
+  | FUNC_CALL
+  | TYPE_DEF
+}
+
+RETURN_STAT = { "return" ~ explist? }
+laststat    = { RETURN_STAT | "break" | "continue" }
+
+METHOD_NAME = @{ NAME }
+funcname    =  { NAME ~ ("." ~ NAME)* ~ (":" ~ METHOD_NAME)? }
+funcbody    =  { ("<" ~ GenericTypeList ~ ">")? ~ "(" ~ parlist? ~ ")" ~ (":" ~ ReturnType)? ~ block ~ "end" }
+VARARGS     =  { "..." }
+parlist     =  { (VARARGS ~ (":" ~ (GenericTypePack | Type))?) | (bindinglist ~ ("," ~ VARARGS ~ (":" ~ (GenericTypePack | Type))?)?) }
+
+explist  = { (exp ~ ",")* ~ exp }
+namelist = { NAME ~ ("," ~ NAME)* }
+
+binding     = { NAME ~ (":" ~ Type)? }
+bindinglist = { binding ~ ("," ~ binding)* }
+
+varlist = { (var ~ ",")* ~ var }
+
+PREFIX_START       = { NAME | ("(" ~ exp ~ ")") }
+PREFIX_INDEX_EXP   = { "[" ~ exp ~ "]" }
+PREFIX_INDEX_NAME  = { "." ~ NAME }
+PREFIX_INDEX       = { PREFIX_INDEX_EXP | PREFIX_INDEX_NAME }
+PREFIX_CALL_FUNC   = { "." ~ NAME ~ funcargs }
+PREFIX_CALL_METHOD = { ":" ~ NAME ~ funcargs }
+PREFIX_CALL        = { funcargs | PREFIX_CALL_FUNC | PREFIX_CALL_METHOD }
+PREFIX_ACCESS      = { PREFIX_INDEX_EXP | funcargs | PREFIX_CALL_FUNC | PREFIX_INDEX_NAME | PREFIX_CALL_METHOD }
+FUNC_CALL          = { PREFIX_START ~ (!(PREFIX_CALL ~ !PREFIX_ACCESS) ~ PREFIX_ACCESS)* ~ PREFIX_CALL }
+var                = { PREFIX_START ~ (!(PREFIX_INDEX ~ !PREFIX_ACCESS) ~ PREFIX_ACCESS)* ~ PREFIX_INDEX? }
+PREFIX_EXP         = { PREFIX_START ~ PREFIX_ACCESS* }
+
+exp          = { (asexp ~ (binop ~ exp)*) | (unop ~ exp ~ (binop ~ exp)*) }
+ifelseexp    = { "if" ~ exp ~ "then" ~ exp ~ ("elseif" ~ exp ~ "then" ~ exp)* ~ "else" ~ exp }
+asexp        = { simpleexp ~ ("::" ~ Type)? }
+stringinterp = { INTERP_BEGIN ~ exp ~ (INTERP_MID ~ exp)* ~ INTERP_END }
+simpleexp    = { NUMBER | STRING | "nil" | "true" | "false" | "..." | tableconstructor | ("function" ~ funcbody) | PREFIX_EXP | ifelseexp | stringinterp }
+funcargs     = { ("(" ~ explist? ~ ")") | tableconstructor | STRING }
+
+tableconstructor =  { "{" ~ fieldlist? ~ "}" }
+fieldlist        =  { field ~ (fieldsep ~ field)* ~ fieldsep? }
+field            =  { ("[" ~ exp ~ "]" ~ "=" ~ exp) | (NAME ~ "=" ~ exp) | exp }
+fieldsep         = _{ "," | ";" }
+
+compoundop = { "+=" | "-=" | "*=" | "/=" | "%=" | "^=" }
+binop      = { "+" | "-" | "*" | "/" | "%" | "^" | ".." | "<=" | "<" | ">=" | ">" | "==" | "~=" | "and" | "or" }
+unop       = { "-" | "not" | "#" }
+
+// Rule.new("SQUIGGLY_OPEN", "_", Expression.literalString("{")),
+// Rule.new("SQUIGGLY_CLOSE", "_", Expression.literalString("}")),
+INTERP_INNER     = { (!("{" | "`") ~ ANY)* }
+INTERP_END_INNER = { (!"`" ~ ANY)* }
+INTERP_BEGIN     = { "`" ~ INTERP_INNER }
+INTERP_MID       = { "}" ~ INTERP_INNER }
+INTERP_END       = { INTERP_END_INNER ~ "`" }
+
+KEYWORD = {
+    "and"
+  | "break"
+  | "do"
+  | "else"
+  | "elseif"
+  | "end"
+  | "false"
+  | "for"
+  | "function"
+  | "if"
+  | "in"
+  | "local"
+  | "nil"
+  | "not"
+  | "or"
+  | "repeat"
+  | "return"
+  | "then"
+  | "true"
+  | "until"
+  | "while"
+}
+
+// TODO: Add support for function attributes
+
+NIL_TYPE     = { "nil" }
+GENERIC_TYPE = { NAME ~ !"..." ~ ("." ~ NAME)? ~ ("<" ~ TypeParams ~ ">")? }
+TYPEOF_TYPE  = { "typeof" ~ "(" ~ exp ~ ")" }
+
+SimpleType = {
+    NIL_TYPE
+  | SingletonType
+  | TYPEOF_TYPE
+  | GENERIC_TYPE
+  | TableType
+  | FunctionType
+  | ("(" ~ Type ~ ")")
+}
+
+SingletonType = { STRING | "true" | "false" }
+
+NIL_UNION    = { "?" }
+Union        = { ("|" ~ SimpleType ~ NIL_UNION?)+ | (SimpleType ~ !"&" ~ NIL_UNION? ~ ("|" ~ SimpleType ~ NIL_UNION?)*) }
+Intersection = { ("&" ~ SimpleType)+ | (SimpleType ~ ("&" ~ SimpleType)*) }
+Type         = { Union | Intersection }
+
+GenericTypePackParameter            = { NAME ~ "..." }
+GenericTypeList                     = { (GenericTypePackParameter | NAME) ~ ("," ~ (GenericTypePackParameter | NAME))* }
+GenericTypePackParameterWithDefault = { NAME ~ "..." ~ "=" ~ (TypePack | VariadicTypePack | GenericTypePack) }
+GenericTypeListWithDefaults         = {
+    ((NAME ~ ("=" ~ Type)?) | GenericTypePackParameterWithDefault)+
+}
+
+TypeList      = { (Type ~ ("," ~ Type)*)? ~ VariadicTypePack? }
+BoundTypeList = { (GenericTypePack | VariadicTypePack) | (((NAME ~ ":")? ~ Type ~ ("," ~ (NAME ~ ":")? ~ Type)*)? ~ ("," ~ (GenericTypePack | VariadicTypePack))?) }
+// Exception to attempts to keep lists largely non-recursive
+// BoundTypeList = { (NAME ~ ":")? ~ Type ~ ("," ~ BoundTypeList) | GenericTypePack | VariadicTypePack? }
+TYPE_PARAM = @{ Type | TypePack | VariadicTypePack | GenericTypePack }
+TypeParams =  { TYPE_PARAM ~ ("," ~ TYPE_PARAM)* }
+TypePack   =  { "(" ~ TypeList? ~ ")" }
+// Includes parentheses since  something like (T...) is an allowed return type
+GenericTypePack    = { ("(" ~ NAME ~ "..." ~ ")") | (NAME ~ "...") }
+VariadicTypePack   = { "..." ~ Type }
+ReturnType         = { Type | TypePack | GenericTypePack | VariadicTypePack }
+TableIndexer       = { "[" ~ Type ~ "]" ~ ":" ~ Type }
+TableProp          = { NAME ~ ":" ~ Type }
+TablePropOrIndexer = { ("read" | "write")? ~ (TableProp | TableIndexer) }
+PropList           = { TablePropOrIndexer ~ (fieldsep ~ TablePropOrIndexer)* ~ fieldsep? }
+TableType          = { ("{" ~ Type ~ "}") | ("{" ~ PropList? ~ "}") }
+FunctionType       = { ("<" ~ GenericTypeList ~ ">")? ~ "(" ~ BoundTypeList? ~ ")" ~ "->" ~ ReturnType }
+
+// funcbody = { ("<" ~ GenericTypeList ~ ">")? ~ "(" ~ parlist? ~ ")" ~ (":" ~ ReturnType)? ~ block ~ "end" }
+FUNC_SIGNATURE = { SOI ~ "function" ~ funcname ~ ("<" ~ GenericTypeList ~ ">")? ~ "(" ~ parlist? ~ ")" ~ (":" ~ ReturnType)? }

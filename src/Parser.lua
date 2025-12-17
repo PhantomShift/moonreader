@@ -1,5 +1,6 @@
 local StringUtils = require("./StringUtils")
 local IterTools = require("./IterTools")
+local FunctionParser = require("./FunctionParser")
 local Parser = {}
 
 type CommentMetadata = {
@@ -10,46 +11,15 @@ type CommentMetadata = {
 	dashed : {}?,
 }
 
-local LONG_COMMENT_PATTERN = "--%[=%[[\n\r].-%]=%]"
+local LONG_COMMENT_PATTERN = "()(--%[=%[[\n\r].-%]=%])()"
 local DASHED_COMMENT_PATTERN = "%-%-%-[^\n\r]*\n?\r?"
 local LINE_CAPTURE = "[^\n\r]+"
-
---TODO?: Support function definitions spanning multiple lines
-local FUNCTION_CAPTURE = "function (%w-)([%.:]?)(%w+)%s*(%b())"
-local GENERIC_CAPTURE = "function (%w-)([%.:]?)(%w+)%b<>%s*(%b())"
-local RETURN_TYPE_CAPTURE = "%)%s*:[\t ]*([^\n\r]+)"
-local function CaptureFunction(s: string, init: number)
-	local line = s:match(LINE_CAPTURE, init)
-	local capture = {line:match(FUNCTION_CAPTURE)}
-	if #capture == 0 then
-		capture = {line:match(GENERIC_CAPTURE)}
-	end
-	if #capture == 0 then return nil end
-
-	-- TODO: Handle case of function containing `self` as its first argument
-
-	capture[5] = line:match(RETURN_TYPE_CAPTURE)
-	if capture[5] then
-		capture[5] = StringUtils.SplitTopDepth(capture[5], ", ")
-	end
-	for k, v in pairs(capture) do
-		if v == "" then capture[k] = nil end
-	end
-	local indexer = capture[2]
-	return {
-		within = capture[1] :: string?,
-		funcType = if indexer == nil or indexer == "." then "function" elseif indexer == ":" then "method" else "none" :: "function" | "method" | "none",
-		name = capture[3] :: string,
-		arguments = capture[4] :: string,
-		returnType = capture[5] :: {string}?
-	}
-end
 
 local function GetLongCommentMeta(s: string) : CommentMetadata
 	local metadata = {}
 
 	local iter = StringUtils.IterLines(s) :: () -> string
-	local commentStart = iter():match("--%[=*%[") :: string
+	local commentStart = iter():match("--%[=%[") :: string
 	metadata.equalLength = (commentStart:match("=+") or ""):len()
 	local line
 	repeat
@@ -58,37 +28,6 @@ local function GetLongCommentMeta(s: string) : CommentMetadata
 	metadata.indent = line:match("^%s+") or ""
 
 	return { long = metadata }
-end
-
--- Small state machine to properly capture long comments
-local function CaptureLongComment(s: string, init: number?) : (string?, ...number)
-	local i = init or 0
-	local len = s:len()
-	local window = s:sub(i, i + 2)
-	local matchStart = 0
-	
-	while matchStart < len do
-		while window ~= "--[" and i + 2 < len do
-			i += 1
-			window = s:sub(i, i + 2)
-		end
-		if window ~= "--[" then
-			return nil
-		end
-		matchStart = i
-		local balance = (s:sub(i + 3):match("^=+") or ""):len()
-		-- Note: Moonwave specifies that doc comments SPECIFICALLY use one equals sign
-		if balance == 1 then
-			local closing = `]{string.rep("=", balance)}]`
-			local _closeStart, closeEnd = s:find(closing, i + 3, true)
-			if closeEnd ~= nil then
-				return s:sub(matchStart, closeEnd), matchStart, closeEnd
-			end
-		end
-		i = matchStart + 3
-	end
-
-	return nil
 end
 
 local Tags = {
@@ -132,7 +71,7 @@ local Tags = {
 	readonly = "@readonly",
 
 	-- Class tags
-	__index = "@__index (%w+)" -- TODO: respect index tag when detecting methods
+	__index = "@__index (%w+)", -- TODO: respect index tag when detecting methods
 
 	--TODO: Remaining tag "@external" (needs design to be useful)
 }
@@ -148,14 +87,14 @@ local MARKER_TAGS = {
 
 	-- visibility
 	private = true,
-	
+
 	-- realm
 	client = true,
 	server = true,
 	plugin = true,
 
 	-- property
-	readonly = true 
+	readonly = true
 }
 local function __name_type_comment_parse(s: string)
 	local front, comment = StringUtils.SplitOnce(s, " -- ")
@@ -189,30 +128,29 @@ export type ParsedComment = {
 	tag: {[string]: {string}},
 
 	yields: boolean,
-	param: {
-		[string]: {[number]: string, order: number}
-	},
-	["return"]: {string},
-	error: {{string}},
+	param: {{name: string, luaType: string?, description: string?}},
+	["return"]: {{luaType: string, description: string?}},
+	error: {{luaType: string, description: string?}},
 
-		-- Usage tags
+	-- Usage tags
 	unreleased: boolean,
 	since: string,
 	deprecated: {string},
-	
+
 	server: boolean,
 	client: boolean,
 	plugin: boolean,
-	
+
 	private: boolean,
 	ignore: boolean,
-	
+
 	readonly: boolean,
-	
+
 	__index: string,
 
 	description: string,
-	__commentType: "Long" | "Dashed"
+	__commentType: "Long" | "Dashed",
+	__typeParams: {string}?,
 }
 
 local NewlineInducers = {
@@ -222,16 +160,18 @@ local NewlineInducers = {
 	["#"] = true
 }
 
-function Parser.ParseCommentGroup(source: string, comment: string, commentType: "Long" | "Dashed") : ParsedComment
+function Parser.ParseCommentGroup(source: string, start: number, finish: number, commentType: "Long" | "Dashed") : ParsedComment
 	local result = {
 		__source = source,
-		__commentType = commentType
+		__commentType = commentType,
+		__start = start,
+		__end = finish
 	}
-	result.__start, result.__end = source:find(comment, 0, true)
+	local comment = source:sub(start, finish)
 
-	local paramNumber = 1
-	local returnNumber = 1
-	local errorNumber = 1
+	local params = {}
+	local returns = {}
+	local errors = {}
 
 	for tag, pattern in pairs(Tags) do
 		local g = comment:gmatch(pattern)
@@ -241,30 +181,23 @@ function Parser.ParseCommentGroup(source: string, comment: string, commentType: 
 				if COMPLEX_TAGS[tag] then
 					info = COMPLEX_TAGS[tag](info[1])
 				end
-	
+
 				if REPEATABLE_TAGS[tag] then
 					if tag == "." then tag = "field" end
-	
+
 					if result[tag] == nil then result[tag] = {} end
 					if tag == "return" then
-						result[tag][returnNumber] = info[1]
-						returnNumber += 1
+						table.insert(returns, { luaType = info[1], description = info[2] })
 					elseif tag == "error" then
-						result[tag][errorNumber] = info
-						errorNumber += 1
+						table.insert(errors, { luaType = info[1], description = info[2] })
+					elseif tag == "param" then
+						table.insert(params, { name = info[1], luaType = info[2], description = info[3] })
 					else
 						result[tag][info[1]] = info
-					end
-					if tag == "param" then
-						result[tag][info[1]].order = paramNumber
-						paramNumber = paramNumber + 1
 					end
 				elseif MARKER_TAGS[tag] then
 					result[tag] = true
 				else
-					-- if tag == "return" then
-					-- 	print(table.concat({comment:match(pattern)}, "\t"))
-					-- end
 					result[tag] = if info.n == 1 then info[1] else info
 				end
 			else
@@ -272,12 +205,12 @@ function Parser.ParseCommentGroup(source: string, comment: string, commentType: 
 			end
 			info = table.pack(g())
 		end
-
-		-- local info = table.pack(comment:match(pattern))
-		-- if #info > 0 then
-			
-		-- end
 	end
+
+	result.param = params
+	result["return"] = returns
+	result.error = errors
+
 	-- Overall entry description
 	if commentType == "Long" then
 		local meta = GetLongCommentMeta(comment).long
@@ -373,46 +306,153 @@ function Parser.ParseCommentGroup(source: string, comment: string, commentType: 
 	return result
 end
 
-function Parser.InferFunctionInformation(parsedComment: ParsedComment)   
-	local init: number = parsedComment.__end + 1
-	local rawFunctionInfo = CaptureFunction(parsedComment.__source :: string, init)
-	-- print(parsedComment.param)
-	if rawFunctionInfo == nil then return end
-	parsedComment.within = parsedComment.within or rawFunctionInfo.within
-	parsedComment[rawFunctionInfo.funcType] = parsedComment[rawFunctionInfo.funcType] or rawFunctionInfo.name
-	parsedComment["return"] = parsedComment["return"] or rawFunctionInfo.returnType
-	if rawFunctionInfo.arguments:len() > 2 then
-		local paramNumber = 1
-		for _, argument in pairs(StringUtils.SplitTopDepth(rawFunctionInfo.arguments:sub(2, -2), ", ")) do
-			local left, right = StringUtils.SplitOnce(argument, ": ")
-			-- print(left, right)
-			if parsedComment.param == nil then
-				parsedComment.param = {[left] = {left, right, order = paramNumber}}
-			elseif parsedComment.param[left] == nil then
-				parsedComment.param[left] = {left, right, order = paramNumber}
-			end
-			if parsedComment.param[left][2] == "" then
-				parsedComment.param[left][2] = right
-			end
-			parsedComment.param[left].order = paramNumber
-			paramNumber = paramNumber + 1
+--- Returns true if `comment` was modified
+function Parser.ApplyFunctionInfo(comment: ParsedComment, info: FunctionParser.FunctionSignature, classIndex: {[string]: string}) : boolean
+	-- TODO: Decide what to do with functions that take self as the first argument (i.e. function Class.method(self) end)
+	local within, funcName, path, lastSep: string
+	local root, back = StringUtils.SplitOnce(info.name, ".")
+	lastSep = "."
+	if not back then
+		root, back = StringUtils.SplitOnce(info.name, ":")
+		lastSep = ":"
+	end
+
+	if classIndex[root] == nil then
+		if comment.within == nil then
+			return false
+		else
+			within = comment.within
 		end
+	else
+		within = root
+	end
+	if not back then return false end
+	local tmpLastSep = back:match(".+([%.:]).-$")
+	if tmpLastSep then
+		path, funcName = back:match(`(.+)%{tmpLastSep}(.+)$`)
+		lastSep = tmpLastSep
+	else
+		funcName = back
+		path = ""
+	end
+
+	-- Ignore methods that are not directly attached to the class or attached to its prototype (@__index tag)
+	if path ~= "" and path ~= classIndex[within] then return false end
+	if not comment.within then
+		comment.within = within
+	end
+
+	if #info.params > 0 and comment.param == nil then
+		comment.param = {}
+	end
+	for i, param in info.params do
+		if comment.param[i] == nil then
+			comment.param[i] = param
+		else
+			comment.param[i].name = comment.param[i].name or param.name
+			local t = comment.param[i].luaType
+			comment.param[i].luaType = if t and t ~= "" then t else param.luaType
+		end
+	end
+	if comment["return"] == nil then
+		comment["return"] = {}
+	end
+	for i, retType in info.returns do
+		if comment["return"][i] == nil then
+			comment["return"][i] = { luaType = retType }
+		else
+			comment["return"][i].luaType = comment["return"][i].luaType or retType
+		end
+	end
+
+	if comment["function"] == nil or comment.method == nil then
+		if lastSep == "." then
+			comment["function"] = funcName
+		else
+			comment.method = funcName
+		end
+	end
+
+	if #info.genericTypeParams > 0 then
+		comment.__typeParams = info.genericTypeParams
+	end
+	return true
+end
+
+function Parser.InferFunctionInformation(parsedComment: ParsedComment, classIndex: {[string]: string})
+	if parsedComment.prop or parsedComment.interface or parsedComment["type"] then return end
+	local init: number = parsedComment.__end + 1
+	-- Only infer if function directly follows the comment
+	if (parsedComment.__source :: string):sub(init):match("^[ \t]*\n?[ \t]*function%s") == nil then
+		return
+	end
+
+	local sigInfo = FunctionParser.ParseSignature(parsedComment.__source :: string, init)
+	if sigInfo then
+		Parser.ApplyFunctionInfo(parsedComment, sigInfo, classIndex)
+	else
+		warn("[moonreader] Function parser could not detect function despite being matched?")
+		print("[moonreader]", (parsedComment.__source :: string):sub(init, init + 64))
 	end
 end
 
 function Parser.ReadSource(src: string) : {ParsedComment}
 	local results = {}
-	local comment, _start, finish = CaptureLongComment(src)
-	while comment ~= nil do
-		table.insert(results, Parser.ParseCommentGroup(src, comment, "Long"))
-		comment, _start, finish = CaptureLongComment(src, finish)
+	for start, _match, finish in src:gmatch(LONG_COMMENT_PATTERN) do
+		table.insert(results, Parser.ParseCommentGroup(src, start, finish, "Long"))
 	end
 	for _match, front, back in StringUtils.GMatchRepeated(src, DASHED_COMMENT_PATTERN, nil, true) do
-		table.insert(results, Parser.ParseCommentGroup(src, src:sub(front, back), "Dashed"))
+		table.insert(results, Parser.ParseCommentGroup(src, front, back, "Dashed"))
 	end
 
+	-- Secondary pass on parsed comments, infer additional function information for annotated functions
+	local classIndex = {}
+	for _, result in results do
+		if result.class ~= nil then
+			classIndex[result.class] = result.__index or "__index"
+		end
+	end
 	for _, result in pairs(results) do
-		Parser.InferFunctionInformation(result)
+		Parser.InferFunctionInformation(result, classIndex)
+	end
+
+	-- Full second pass - detect additional functions/methods that are not annotated
+	local functionCache = {}
+	for _, result in results do
+		local funcName = result.method or result["function"]
+		if funcName then
+			local cacheName = `{result.within}/{funcName}`
+			functionCache[cacheName] = true
+		end
+	end
+
+	for location in src:gmatch("%s()function%s+[%w_]+[%.:]") do
+		local signature = FunctionParser.ParseSignature(src, location)
+		if not signature then
+			-- print("failed to get signature?")
+			-- print(src:sub(location, location + 64))
+			continue
+		end
+		-- Ignore functions starting with _ that aren't explictly documented
+		if signature.name:match("[%.:]_[_%w]*$") then continue end
+
+		local within = signature.name:match("^([%w_]+)[%.:]")
+		local funcName = signature.name:match("[%.:]([%w_]+)$")
+		local cacheName = `{within}/{funcName}`
+		if functionCache[cacheName] then continue end
+
+		local fcomment: ParsedComment = {
+			__start = location,
+			__end = signature.__raw.finish,
+			__commentType = "Dashed",
+			param = {},
+			["return"] = {},
+			error = {},
+		} :: ParsedComment
+		if Parser.ApplyFunctionInfo(fcomment, signature, classIndex) then
+			table.insert(results, fcomment)
+			functionCache[cacheName] = true
+		end
 	end
 
 	for _, result in pairs(results) do
@@ -429,7 +469,7 @@ function Parser.ReadScript(source: EditableScript) : {ParsedComment}
 	for _, result in pairs(results) do
 		result.__source = source
 	end
-	
+
 	return results
 end
 return Parser

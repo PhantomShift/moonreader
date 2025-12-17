@@ -151,6 +151,7 @@ local function generateDocs()
 		
 		local classEntry = BaseTextLabel:Clone()
 		-- Idk how crazy people will be
+		-- TODO: Make this not break if a class has > 9999 entries
 		local classIndex = i * 10000
 		classEntry.LayoutOrder = classIndex
 		classEntry.Name = tostring(classIndex)
@@ -164,6 +165,7 @@ local function generateDocs()
 		classEntry.Parent = Scroll
 	
 		-- Like I said, who knows how crazy people will be
+		-- TODO: Make this not break if a section has > 999 entries
 		local numInterfaces = classIndex + 1000
 		local numProps = classIndex + 2000
 		local numFunctions = classIndex + 3000
@@ -218,17 +220,24 @@ local function generateDocs()
 					subEntryLabel.Name = tostring(numInterfaces)
 					subEntryLabel.Parent = Scroll
 				end
+			elseif entry["type"] then
+				head = MarkdownStyled(`### {entry["type"][1]}`)
+				numInterfaces += 1
+				entryLabel.LayoutOrder = numInterfaces
+				entryLabel.Name = tostring(numInterfaces)
+				local subEntryLabel = BaseTextLabel:Clone()
+				subEntryLabel.Text = MarkdownStyled(`\`\`\`\ntype {entry["type"][1]} = {entry["type"][2]}\n\`\`\``)
+				numInterfaces += 1
+				subEntryLabel.LayoutOrder = numInterfaces
+				subEntryLabel.Name = tostring(numInterfaces)
+				subEntryLabel.Parent = Scroll
 			else
-				QuickSearchTool.AddEntry(entry)
 				-- Entry is a function/method
+				QuickSearchTool.AddEntry(entry)
 				local args = {}
 				if entry.param ~= nil then
-					for name, info in pairs(entry.param) do
-						local arg = name
-						if info[2] ~= nil then
-							arg = arg .. `: {info[2]}`
-						end
-						args[info.order] = arg
+					for p, info in pairs(entry.param) do
+						args[p] = if info.luaType then `{info.name}: {info.luaType}` else info.name
 					end
 				end
 				head = MarkdownStyled(`### {entry.method or entry["function"]}`)
@@ -236,17 +245,24 @@ local function generateDocs()
 				entryLabel.LayoutOrder = numFunctions
 				entryLabel.Name = tostring(numFunctions)
 				
-				-- local returnString = if entry["return"] ~= nil then ` : {next(entry["return"])}` else ""
-				local returnString = if entry["return"] ~= nil then ` : {table.concat(entry["return"], ", ")}` else ""
+				local returnString = ""
+				if #entry["return"] > 1 then
+					local concatted = IterTools.List.Values(entry["return"]):map(function(r) return r.luaType end):concat(",\n    ")
+					returnString = ` : (\n    {concatted}\n)`
+				elseif #entry["return"] == 1 then
+					returnString = ` : {entry["return"][1].luaType}`
+				end
 				local argString = ""
 				if #args > 1 then
 					argString = "\n" .. IterTools.List.Values(args):map(function(s) return "    " .. s end):concat(",\n") .. "\n"
 				else
 					argString = table.concat(args, ", ")
 				end
+
 				local concatenator = if entry.method ~= nil then ":" else "."
 				local subEntryLabel = BaseTextLabel:Clone()
-				local body = MarkdownStyled("```\n" .. `{entry.within}{concatenator}{entry.method or entry["function"]}({argString}){returnString}` .. "\n```")
+				local typeParamString = if entry.__typeParams then `<{table.concat(entry.__typeParams, ", ")}>` else ""
+				local body = MarkdownStyled("```\n" .. `{entry.within}{concatenator}{entry.method or entry["function"]}{typeParamString}({argString}){returnString}` .. "\n```")
 				body = `<font size="{styleInfo.h4}">{body}</font>`
 				subEntryLabel.Text = body
 				numFunctions += 1
@@ -296,7 +312,7 @@ local function generateDocs()
 					if entry.prop then
 						numProps += 1
 						subEntryLabel.LayoutOrder = numProps
-					elseif entry.interface then
+					elseif entry.interface or entry["type"] then
 						numInterfaces += 1
 						subEntryLabel.LayoutOrder = numInterfaces
 					else
@@ -307,11 +323,11 @@ local function generateDocs()
 				end
 			end
 
-			if entry.error ~= nil then
+			if entry.error and #entry.error > 0 then
 				local errorEntryLabel = BaseTextLabel:Clone()
 				errorEntryLabel.Text = MarkdownStyled("#### Errors")
 				for _num, error in entry.error do
-					local errType, errDesc = table.unpack(error)
+					local errType, errDesc = error.luaType, error.description
 					errorEntryLabel.Text ..= "\n" .. MarkdownStyled(("`%s`"):format(errType))
 					if errDesc then
 						errorEntryLabel.Text ..= " - " .. MarkdownStyled(errDesc)

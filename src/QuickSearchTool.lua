@@ -34,22 +34,28 @@ function QuickSearchTool.AddEntry(entry: Parser.ParsedComment & {__source: Local
 	local name = entry.method or entry["function"]
 	local args = {}
 	if entry.param ~= nil then
-		for argName, info in pairs(entry.param) do
-			local arg = argName
-			if info[2] ~= nil then
-				arg = arg .. `: {info[2]}`
-			end
-			args[info.order] = arg
+		for p, info in pairs(entry.param) do
+			args[p] = if info.luaType then `{info.name}: {info.luaType}` else info.name
 		end
 	end
-	
-	local returnString = if entry["return"] ~= nil then ` : {table.concat(entry["return"], ", ")}` else ""
+
+	local returnString = ""
+	if entry["return"] then
+		if #entry["return"] > 1 then
+			local concatted = IterTools.List.Values(entry["return"]):map(function(r) return r.luaType end):concat(", ")
+			returnString = ` : ({concatted})`
+		elseif #entry["return"] == 1 then
+			returnString = ` : {entry["return"][1].luaType}`
+		end
+	end
+
 	local argString = table.concat(args, ", ")
+	local typeParamString = if entry.__typeParams then `<{table.concat(entry.__typeParams, ", ")}>` else ""
 	
 	local container = EntryExample:Clone()
 	container.Name = base
 	container.Visible = true
-	container.Expand.Text = `{base}{concatenator}{name}({argString}){returnString}`
+	container.Expand.Text = `{base}{concatenator}{name}{typeParamString}({argString}){returnString}`
 	container.Description.Size = UDim2.fromScale(1, 0)
 	container.Description.AutomaticSize = Enum.AutomaticSize.None
 
@@ -60,8 +66,9 @@ function QuickSearchTool.AddEntry(entry: Parser.ParsedComment & {__source: Local
 			return "* `" .. s .. "`"
 		end):concat("\n"), QuickSearchTool.StyleInfo) .. "<br />"
 	end
-	if entry["return"] then
-		container.Description.Text ..= Markdown("__Returns__\n" .. "`" .. (table.concat(entry["return"], ", ")) .. "`", QuickSearchTool.StyleInfo) .. "<br />"
+	if entry["return"] and #entry["return"] > 0 then
+		local concatted = IterTools.List.Values(entry["return"]):map(function(r) return `* \`{r.luaType}\`` end):concat("\n")
+		container.Description.Text ..= Markdown("__Returns__\n" .. (concatted), QuickSearchTool.StyleInfo) .. "<br />"
 	end
 	if entry.description then
 		container.Description.Text ..= Markdown(entry.description, QuickSearchTool.StyleInfo, false)
