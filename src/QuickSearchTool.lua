@@ -84,12 +84,6 @@ function QuickSearchTool.AddEntry(entry: Parser.ParsedComment & {__source: Local
 			end
 		end
 	end)
-	GarbageMan[container] =  QuickSearchUi:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
-		if container == QuickSearchTool.CurrentOpen then
-			local height = TextService:GetTextSize(container.Description.ContentText, container.Description.TextSize, Enum.Font.SourceSans, Vector2.new(container.Description.AbsoluteSize.X, math.huge)).Y
-			container.Description:TweenSize(UDim2.new(1, 0, 0, height), nil, nil, TWEEN_TIME, true)
-		end
-	end)
 	table.insert(QuickSearchTool.Containers, container)
 end
 
