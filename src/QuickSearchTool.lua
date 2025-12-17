@@ -1,5 +1,6 @@
 local TextService = game:GetService("TextService")
 local ScriptEditorService = game:GetService("ScriptEditorService")
+local TweenService = game:GetService("TweenService")
 
 local Parser = require "./Parser"
 local Markdown = require "./Markdown"
@@ -19,6 +20,13 @@ type QuickSearchContainer = typeof(EntryExample)
 local GarbageMan = Garbage.new()
 
 local TWEEN_TIME = 0.5
+local function ScrollToView(scroll: ScrollingFrame, child: GuiObject, tweenTime: number?, padding: number?)
+	tweenTime = if tweenTime == nil then TWEEN_TIME else tweenTime
+	padding = if padding == nil then 64 else padding
+	TweenService:Create(scroll, TweenInfo.new(tweenTime), {
+		CanvasPosition = child.AbsolutePosition - Vector2.new(0, padding) + scroll.CanvasPosition
+	}):Play()
+end
 
 function QuickSearchTool.AddEntry(entry: Parser.ParsedComment & {__source: LocalScript | ModuleScript | Script})
 	local base = entry.within
@@ -99,11 +107,12 @@ function QuickSearchTool.Clear()
 end
 
 function QuickSearchTool.Open(entryContainer: QuickSearchContainer)
-	if entryContainer.Description.Text:len() == 0 or entryContainer.Description.Text == "\n" or entryContainer.Description.Text == " " then
+	if entryContainer.Description.Text:len() == 0 or entryContainer.Description.Text:match("^%s+$") then
 		return
 	end
 	QuickSearchTool.CurrentOpen = entryContainer
 	entryContainer.Description.AutomaticSize = Enum.AutomaticSize.Y
+	ScrollToView(Entries, entryContainer)
 end
 
 function QuickSearchTool.Close(entryContainer: QuickSearchContainer?)
