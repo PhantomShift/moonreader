@@ -129,7 +129,7 @@ function StringUtils.SplitTopDepth(s: string, sep: string)
 end
 
 -- Right side is `nil` if `sep` is never found
-function StringUtils.SplitOnce(s: string, sep: string, init: number?)
+function StringUtils.SplitOnce(s: string, sep: string, init: number?) : (string, string?)
     init = (init or 0) % s:len()
     local sepFirst, sepLast = s:find(sep, init, true)
     if sepFirst == nil then
@@ -139,7 +139,7 @@ function StringUtils.SplitOnce(s: string, sep: string, init: number?)
 end
 
 function StringUtils.TrimWhitespace(s: string)
-    return s:match("^%s*(.*)%s*$") or ""
+    return s:match("^%s*(.-)%s*$") or ""
 end
 
 function StringUtils.RemoveWhitespace(s: string)
