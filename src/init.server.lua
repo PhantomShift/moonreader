@@ -303,6 +303,10 @@ local function generateDocs()
 			if entry.since then
 				head ..= ` <i>since {entry.since}</i>`
 			end
+			if entry.deprecated then
+				local c = if entry.deprecated[2] then ` -- {entry.deprecated[2]}` else ""
+				head ..= ` <i>⚠️ deprecated since {entry.deprecated[1]}{c}</i>`
+			end
 
 			entryLabel.Text = entryLabel.Text .. head
 			entryLabel.Parent = Scroll
