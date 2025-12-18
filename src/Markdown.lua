@@ -1,6 +1,6 @@
 local StringUtils = require "./StringUtils"
 local IterTools = require "./IterTools"
-local lexer = if game then require(script.Parent.External.lexer) else require("external/Highlighter/src/lexer/init")
+local lexer = if game then require(script.Parent.External.lexer) else require("../external/Highlighter/src/lexer/init")
 
 type StyleInfo = {
     useCustomStyle: boolean,

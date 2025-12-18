@@ -37,7 +37,7 @@ function Iterator.new<T...>(init: thread | () -> (T...))
             coroutine.create(init)
         else
             error(`init must be a function or coroutine, traceback:\n{debug.traceback(nil, 2)}`)
-    
+
     return setmetatable({thread = co}, Iterator)
 end
 
@@ -331,7 +331,7 @@ function Iterator:map<T, U>(converter: {[T]: U} | (...T) -> (...U))
                 returns = self:nextPacked()
             end
             return nil
-        end) 
+        end)
     end
     return Iterator.new(function()
         local _, value = coroutine.resume(self.thread)
@@ -355,7 +355,7 @@ function Iterator:filter<T>(predicate: {[T]: boolean} | (T) -> boolean)
                 returns = self:nextPacked()
             end
             return nil
-        end) 
+        end)
     end
     return Iterator.new(function()
         local returns = self:nextPacked()
@@ -448,7 +448,7 @@ function Iterator:iterWhile<T>(predicate: {[T]: boolean} | (T) -> boolean)
                 returns = self:nextPacked()
             end
             return nil
-        end) 
+        end)
     end
     return Iterator.new(function()
         local returns = self:nextPacked()
@@ -472,7 +472,7 @@ function Iterator:skipWhile<T>(predicate: {[T]: boolean} | (T) -> boolean)
                 returns = self:nextPacked()
             end
             return nil
-        end) 
+        end)
     end
     return Iterator.new(function()
         local returns = self:nextPacked()
