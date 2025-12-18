@@ -9,6 +9,9 @@ local SettingsFrame = Assets.Settings
 local BaseLabel = Assets.Scroll.HiddenFolder.BaseLabel
 local BlockPadding = Assets.Scroll.HiddenFolder.UIPadding
 
+local OnUpdatedEvent = Instance.new("BindableEvent")
+OnUpdatedEvent.Parent = script
+
 type SettingsImpl = {
     __index:    SettingsImpl,
     __iter:     (self: Settings) -> (typeof(next), { string }),
@@ -167,6 +170,7 @@ end
 
 local StyleSettings: Settings = SettingsBuilder.new()
     :addEntry("useCustomStyle", "Use Custom Styling", false, "Checkbox")
+    :addEntry("documentPadding", "Document Padding", "16", "TextEntry", validateFontSize)
     :addEntry("backgroundColor", "Background Color", "47, 47, 47", "TextEntry", validateColor)
     :addEntry("codeblock", "Codeblock Background Color", "26, 13, 51", "TextEntry", validateColor)
     :addEntry("textColor", "Text Color", "255, 255, 255", "TextEntry", validateColor)
@@ -195,6 +199,8 @@ local SettingsInterface = {}
 SettingsInterface.PlaceSettings = PlaceSettings
 SettingsInterface.StyleSettings = StyleSettings
 SettingsInterface.GlobalSettings = GlobalSettings
+
+SettingsInterface.OnUpdated = OnUpdatedEvent.Event
 
 type StyleInfo = {
     useCustomStyle: boolean,
@@ -365,6 +371,12 @@ One of us is lying; trust nobody.
 :::
 ]]
         local styleInfo = SettingsInterface.getStyleInfoPreview()
+        local padding = styleInfo.documentPadding
+        local PreviewPadding = Preview.PreviewContainer.UIPadding
+        PreviewPadding.PaddingBottom = UDim.new(0, padding)
+        PreviewPadding.PaddingTop = UDim.new(0, padding)
+        PreviewPadding.PaddingLeft = UDim.new(0, padding)
+        PreviewPadding.PaddingRight = UDim.new(0, padding)
         for i, entry in Markdown.ProcessMarkdown(previewText, styleInfo, false, true) do
             if entry:match("^%s*$") then continue end
 
@@ -476,6 +488,7 @@ One of us is lying; trust nobody.
         end
 
         widget.Enabled = false
+        OnUpdatedEvent:Fire()
     end)
 end
 

@@ -23,6 +23,25 @@ local toolbar = plugin:CreateToolbar("Moonreader")
 local SettingsInterface = require(script.Settings)
 SettingsInterface.init(plugin, widgetInfo, toolbar)
 
+local widget: DockWidgetPluginGui = plugin:CreateDockWidgetPluginGui("__moonreaderDocuments", widgetInfo)
+widget.Title = "Moonreader Documents"
+local widgetPadding = Instance.new("UIPadding")
+widgetPadding.Parent = Scroll
+local function applyWidgetPadding(offset: number)
+	local u = UDim.new(0, offset)
+	widgetPadding.PaddingBottom = u
+	widgetPadding.PaddingTop = u
+	widgetPadding.PaddingLeft = u
+	widgetPadding.PaddingRight = u
+end
+applyWidgetPadding(SettingsInterface.StyleSettings:get("documentPadding"))
+SettingsInterface.OnUpdated:Connect(function()
+	applyWidgetPadding(SettingsInterface.StyleSettings:get("documentPadding"))
+end)
+
+local quickSearchWidget = plugin:CreateDockWidgetPluginGui("__moonreaderQuickSearch", widgetInfo)
+quickSearchWidget.Title = "Moonreader Quick Search"
+
 local Search
 local searchPos = Vector3.zero
 local function updateHighlight()
@@ -33,7 +52,7 @@ local function updateHighlight()
 		local child = Scroll:FindFirstChild(tostring(searchPos.X))
 		local bounds, lineHeight = StringUtils.GetRichTextPositionBounds(child, searchPos.Z)
 		Scroll.CanvasPosition = Vector2.new(0, 0)
-		local y_pos = child.AbsolutePosition.Y + bounds.Y
+		local y_pos = child.AbsolutePosition.Y + bounds.Y - widgetPadding.PaddingTop.Offset
 		if child:FindFirstChildOfClass("UIPadding") then
 			y_pos += 16
 		end
@@ -46,12 +65,6 @@ local function updateHighlight()
 end
 
 Scroll:GetPropertyChangedSignal("AbsoluteSize"):Connect(updateHighlight)
-
-local widget: DockWidgetPluginGui = plugin:CreateDockWidgetPluginGui("__moonreaderDocuments", widgetInfo)
-widget.Title = "Moonreader Documents"
-
-local quickSearchWidget = plugin:CreateDockWidgetPluginGui("__moonreaderQuickSearch", widgetInfo)
-quickSearchWidget.Title = "Moonreader Quick Search"
 
 QuickSearchTool.SetParent(quickSearchWidget)
 SearchButton.Parent = widget
