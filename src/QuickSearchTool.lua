@@ -61,13 +61,19 @@ function QuickSearchTool.AddEntry(entry: Parser.ParsedComment & {__source: Local
 
 	container.Description.RichText = true
 	-- container.Description.TextEditable = false
-	if #args > 0 then
-		container.Description.Text ..= Markdown("__Params__\n" .. IterTools.List.Values(args):map(function(s: string)
-			return "* `" .. s .. "`"
-		end):concat("\n"), QuickSearchTool.StyleInfo) .. "<br />"
+	if #entry.param > 0 then
+		local collected = {}
+		for _, param in entry.param do
+			local t = if param.luaType then `: {param.luaType}` else ""
+			local d = if param.description then ` -- {param.description}` else ""
+			table.insert(collected, `* \`{param.name}{t}\`{d}`)
+		end
+		container.Description.Text ..= Markdown(`__Params__\n{table.concat(collected, "\n")}`, QuickSearchTool.StyleInfo) .. "<br />"
 	end
 	if entry["return"] and #entry["return"] > 0 then
-		local concatted = IterTools.List.Values(entry["return"]):map(function(r) return `* \`{r.luaType}\`` end):concat("\n")
+		local concatted = IterTools.List.Values(entry["return"]):map(function(r)
+			return `* \`{r.luaType}\`{if r.description then " -- " .. r.description else "" }`
+		end):concat("\n")
 		container.Description.Text ..= Markdown("__Returns__\n" .. (concatted), QuickSearchTool.StyleInfo) .. "<br />"
 	end
 	if entry.description then

@@ -234,29 +234,41 @@ local function generateDocs()
 			else
 				-- Entry is a function/method
 				QuickSearchTool.AddEntry(entry)
-				local args = {}
-				if entry.param ~= nil then
-					for p, info in pairs(entry.param) do
-						args[p] = if info.luaType then `{info.name}: {info.luaType}` else info.name
-					end
-				end
 				head = MarkdownStyled(`### {entry.method or entry["function"]}`)
 				numFunctions += 1
 				entryLabel.LayoutOrder = numFunctions
 				entryLabel.Name = tostring(numFunctions)
-				
-				local returnString = ""
-				if #entry["return"] > 1 then
-					local concatted = IterTools.List.Values(entry["return"]):map(function(r) return r.luaType end):concat(",\n    ")
-					returnString = ` : (\n    {concatted}\n)`
-				elseif #entry["return"] == 1 then
-					returnString = ` : {entry["return"][1].luaType}`
-				end
+
 				local argString = ""
-				if #args > 1 then
-					argString = "\n" .. IterTools.List.Values(args):map(function(s) return "    " .. s end):concat(",\n") .. "\n"
-				else
-					argString = table.concat(args, ", ")
+				local numArgs = if entry.param then #entry.param else 0
+				if entry.param and (numArgs > 1  or IterTools.Table.Values(entry.param):any(function(param)
+					return param.description ~= nil
+				end)) then
+					for p, param in entry.param do
+						local c = if p < numArgs then "," else ""
+						local t = if param.luaType then `: {param.luaType}` else ""
+						local d = if param.description then ` -- {param.description}` else ""
+						argString ..= `\n    {param.name}{t}{c}{d}`
+					end
+					argString ..= "\n"
+				elseif numArgs == 1 then
+					local arg = entry.param[1]
+					argString = if arg.luaType then `{arg.name}: {arg.luaType}` else arg.name
+				end
+
+				local returnString = ""
+				local numReturns = if entry["return"] then #entry["return"] else 0
+				if entry["return"] and numReturns > 1 then
+					returnString = "("
+					for r, ret in entry["return"] do
+						local c = if r < numArgs then "," else ""
+						local d = if ret.description then ` -- {ret.description}` else ""
+						argString ..= `\n    {ret.luaType}{c}{d}`
+					end
+					returnString ..= "\n)"
+				elseif numReturns == 1 then
+					local ret = entry["return"][1]
+					returnString = ` : {ret.luaType}{if ret.description then " -- " .. ret.description else ""}`
 				end
 
 				local concatenator = if entry.method ~= nil then ":" else "."
